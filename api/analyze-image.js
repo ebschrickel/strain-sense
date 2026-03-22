@@ -27,42 +27,33 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 1000,
         messages: [{
           role: "user",
           content: [
             { type: "image", source: { type: "base64", media_type: mediaType, data: imageBase64 } },
-            { type: "text", text: `You are analyzing a cannabis product label. This could be flower, vape, edible, gummy, tincture, oil, capsule, or any cannabis product.
-
-Extract ALL data you can find. Return ONLY in this format, one item per line:
-Strain: [name if visible]
-Product type: [flower/vape/cart/edible/gummy/tincture/capsule] (if visible)
-THC: [number]% (if shown as percentage)
-THC: [number] mg (if shown as milligrams per serving)
-CBD: [number]% (if shown as percentage)
-CBD: [number] mg (if shown as milligrams per serving)
-Ratio: [CBD:THC ratio if shown, e.g. 1:1, 2:1, 20:1]
-Serving size: [number] mg (if visible)
-[TerpeneName]: [number]%
-
-Rules:
-- For edibles/gummies/tinctures, look for mg per serving, mg per piece, or mg per dose
-- If you see a CBD:THC ratio like "1:1" or "2:1", include it
-- Use standard terpene names (Myrcene, Limonene, Linalool, Caryophyllene, Pinene, Terpinolene, Humulene, Ocimene, Nerolidol, Bisabolol, Guaiol)
-- If "Beta-Caryophyllene" write "Caryophyllene", if "Beta-Myrcene" write "Myrcene"
-- Only include data you can clearly read
-- If not a cannabis product, say "NOT_CANNABIS_LABEL"` }
+            { type: "text", text: `Extract ALL visible text from this image exactly as it appears. Return every word, number, symbol, and label you can read — do not interpret, summarize, or reformat anything. Just transcribe every piece of text you see, line by line.` }
           ]
         }]
       }),
     });
 
+    const upstreamStatus = upstream.status;
     const data = await upstream.json();
+
+    // Surface API errors instead of swallowing them
+    if (data.type === "error" || data.error) {
+      const errMsg = data.error?.message || JSON.stringify(data.error) || "Unknown API error";
+      console.error("[analyze-image] Anthropic API error:", upstreamStatus, errMsg);
+      return res.status(200).json({ text: "", debug: `API error (${upstreamStatus}): ${errMsg}` });
+    }
+
     const text = data.content?.map(c => c.text || "").join("") || "";
+    console.log("[analyze-image] status:", upstreamStatus, "| text length:", text.length, "| preview:", text.slice(0, 100));
     return res.status(200).json({ text });
   } catch (err) {
     console.error("Anthropic proxy error:", err);
-    return res.status(500).json({ error: "Analysis failed" });
+    return res.status(500).json({ error: "Analysis failed", detail: err.message });
   }
 }

@@ -268,11 +268,11 @@ function classify(p, tolerance = "regular") {
     if (dose > 10) cautions.push("Beginners should start with 2.5–5 mg and wait at least 2 hours before redosing.");
     if (dose === 0 && thc && thc > 25) cautions.push("High THC — start low, go slow.");
   } else {
-    if (tolerance === "new") {
+    if (tolerance === "new" || tolerance === "occasional") {
       if (thc!==null && ((isVape&&thc>70)||(!isVape&&thc>18))) cautions.push("For new or occasional users, this THC level may feel very intense — start with one small dose and wait.");
       if (thc!==null && ((isVape&&thc>80)||(!isVape&&thc>22))) cautions.push("This potency is not recommended without experienced guidance.");
-    } else if (tolerance === "daily") {
-      if (thc!==null && ((isVape&&thc>92)||(!isVape&&thc>32))) cautions.push("Exceptionally high THC — even for daily users, starting lower is wise.");
+    } else if (tolerance === "high") {
+      if (thc!==null && ((isVape&&thc>92)||(!isVape&&thc>32))) cautions.push("Exceptionally high THC — even for high-tolerance users, starting lower is wise.");
     } else {
       if (thc!==null && ((isVape&&thc>85)||(!isVape&&thc>25))) cautions.push("High THC may override terpene nuance — start low, go slow.");
       if (thc!==null && ((isVape&&thc>80)||(!isVape&&thc>22))) cautions.push("Beginners should approach with extra caution at this potency.");
@@ -319,7 +319,12 @@ function classify(p, tolerance = "regular") {
   else if (isVape) productLabel = "Vape / Concentrate";
   else productLabel = "Flower";
 
-  return { potency, timing, highType, spectrum, cautions, explanation, topTerps, isVape, isEdible, isCBDForward, productType, productLabel, cbdThcRatio, ratioProfile, useCases };
+  const matchStrength =
+    terpenes.length >= 3 && (rP > 0.6 || uP > 0.6) ? "High" :
+    terpenes.length >= 2 && (rP > 0.5 || uP > 0.5) ? "Moderate" :
+    terpenes.length >= 1 ? "Low" : "Inconclusive";
+
+  return { potency, timing, highType, spectrum, cautions, explanation, topTerps, isVape, isEdible, isCBDForward, productType, productLabel, cbdThcRatio, ratioProfile, useCases, matchStrength };
 }
 
 // ─── RATIO INTERPRETER ──────────────────────────────────────
@@ -443,16 +448,24 @@ function generateComparison(aResult, bResult, aName, bName) {
 
 // ─── MOOD PRESETS ───────────────────────────────────────────
 const MOOD_PRESETS = [
-  { id:"relax", icon:"waves", label:"Relaxed & Calm", desc:"Wind down, melt tension", terpenes:["linalool","myrcene","nerolidol"], timing:"PM / Evening", highType:"Body-heavy" },
-  { id:"energy", icon:"zap", label:"Energized & Focused", desc:"Daytime clarity, get things done", terpenes:["limonene","pinene","terpinolene"], timing:"AM / Daytime", highType:"Head / Cerebral" },
-  { id:"social", icon:"users", label:"Social & Uplifted", desc:"Good vibes, conversation", terpenes:["limonene","terpinolene","ocimene"], timing:"AM / Daytime", highType:"Head / Cerebral" },
-  { id:"sleep", icon:"moon", label:"Sleep & Recovery", desc:"Heavy body, full shutdown", terpenes:["myrcene","linalool","nerolidol"], timing:"PM / Evening", highType:"Body-heavy" },
-  { id:"balanced", icon:"activity", label:"Balanced & Grounded", desc:"Even-keel, centered", terpenes:["caryophyllene","humulene","bisabolol"], timing:"Balanced", highType:"Mixed head + body" },
-  { id:"creative", icon:"star", label:"Creative & Exploratory", desc:"Open-minded, playful", terpenes:["terpinolene","limonene","pinene"], timing:"AM / Daytime", highType:"Head / Cerebral" },
-  { id:"pain", icon:"shield", label:"Pain & Inflammation", desc:"Body comfort, anti-inflammatory", terpenes:["caryophyllene","humulene","myrcene"], timing:"PM / Evening", highType:"Body-heavy",
-    extra:"For pain, also look for CBD-forward products (2:1 or higher CBD:THC ratio). Caryophyllene is unique — it binds to CB2 receptors, which are involved in inflammation and pain signaling." },
-  { id:"anxiety", icon:"wind", label:"Calm Anxiety", desc:"Quiet the noise, steady the mind", terpenes:["linalool","limonene","bisabolol"], timing:"Balanced", highType:"Mixed head + body",
-    extra:"CBD-forward products (especially 4:1 or higher) are often preferred for anxiety because they provide calming effects without significant intoxication." },
+  { id:"relax", icon:"waves", label:"Relaxed & Calm", desc:"Wind down, melt tension", terpenes:["linalool","myrcene","nerolidol"], timing:"PM / Evening", highType:"Body-heavy", thcRange:"Low–Moderate",
+    note:"Expect a settling, body-heavy effect — good for unwinding at the end of the day. Effects vary by person and product." },
+  { id:"energy", icon:"zap", label:"Energized & Focused", desc:"Daytime clarity, get things done", terpenes:["limonene","pinene","terpinolene"], timing:"AM / Daytime", highType:"Head / Cerebral", thcRange:"Low–Moderate",
+    note:"Expect a clearer head and more mental energy — best used when you need to stay sharp. Individual response varies." },
+  { id:"social", icon:"users", label:"Social & Uplifted", desc:"Good vibes, conversation", terpenes:["limonene","terpinolene","ocimene"], timing:"AM / Daytime", highType:"Head / Cerebral", thcRange:"Low–Moderate",
+    note:"Expect an uplifted, sociable mood — this profile tends to reduce inhibition without heavy sedation. Individual response varies." },
+  { id:"sleep", icon:"moon", label:"Sleep & Recovery", desc:"Heavy body, full shutdown", terpenes:["myrcene","linalool","nerolidol"], timing:"PM / Evening", highType:"Body-heavy", thcRange:"Moderate–High",
+    note:"Expect deep physical relaxation and a heaviness that supports sleep onset. Not recommended if you need to stay alert." },
+  { id:"balanced", icon:"activity", label:"Balanced & Grounded", desc:"Even-keel, centered", terpenes:["caryophyllene","humulene","bisabolol"], timing:"Balanced", highType:"Mixed head + body", thcRange:"Low–Moderate",
+    note:"Expect a grounded, even-keel effect — neither too sedating nor too stimulating. A good starting point for any time of day." },
+  { id:"creative", icon:"star", label:"Creative & Exploratory", desc:"Open-minded, playful", terpenes:["terpinolene","limonene","pinene"], timing:"AM / Daytime", highType:"Head / Cerebral", thcRange:"Moderate",
+    note:"Expect an open, curious headspace — this profile tends to support divergent thinking. Higher THC can amplify or overwhelm, so start low." },
+  { id:"pain", icon:"shield", label:"Pain & Inflammation", desc:"Body comfort, anti-inflammatory", terpenes:["caryophyllene","humulene","myrcene"], timing:"PM / Evening", highType:"Body-heavy", thcRange:"Moderate–High",
+    extra:"For pain, also look for CBD-forward products (2:1 or higher CBD:THC ratio). Caryophyllene is unique — it binds to CB2 receptors, which are involved in inflammation and pain signaling.",
+    note:"Expect body-focused relief — this profile is used for physical discomfort and inflammation. Effects vary significantly by tolerance and product type." },
+  { id:"anxiety", icon:"wind", label:"Calm Anxiety", desc:"Quiet the noise, steady the mind", terpenes:["linalool","limonene","bisabolol"], timing:"Balanced", highType:"Mixed head + body", thcRange:"Low",
+    extra:"CBD-forward products (especially 4:1 or higher) are often preferred for anxiety because they provide calming effects without significant intoxication.",
+    note:"Expect a calming, quieting effect — this profile is selected for mental ease over physical sedation. Keep THC low; high doses can worsen anxiety." },
 ];
 
 // ─── PERSISTENT STORAGE ─────────────────────────────────────
@@ -626,9 +639,10 @@ function Btn({ children, primary, small, onClick, disabled, style: sx }) {
 // ─── TOLERANCE SELECTOR ─────────────────────────────────────
 function ToleranceSelector({ value, onChange }) {
   const levels = [
-    { key:"new", label:"New / Occasional" },
+    { key:"new", label:"New" },
+    { key:"occasional", label:"Occasional" },
     { key:"regular", label:"Regular" },
-    { key:"daily", label:"Daily" },
+    { key:"high", label:"High Tolerance" },
   ];
   return (
     <div>
@@ -661,14 +675,30 @@ const TERPENE_PLAIN = {
   guaiol:"Pine, relaxing",
 };
 
+function buildBudtenderScript(parsed, result) {
+  const timingWord = result.timing.includes("PM") ? "evening"
+    : result.timing.includes("AM") ? "daytime" : "flexible time-of-day";
+  const effectWord = result.highType === "Body-heavy" ? "body-heavy"
+    : result.highType === "Head / Cerebral" ? "uplifting, head-focused"
+    : "balanced";
+  const productWord = result.isEdible
+    ? (parsed.productType === "tincture" ? "tincture" : "edible")
+    : result.isVape ? "vape or concentrate" : "flower";
+  const potencyWord = ["Very High","Extremely Strong"].includes(result.potency) ? "high"
+    : result.potency === "High" ? "higher" : result.potency === "Low" || result.potency === "Microdose" ? "low" : "moderate";
+  const terpPart = result.topTerps.length > 0
+    ? ` and ${result.topTerps[0].displayName}-forward terpenes` : "";
+  const cbdPart = result.isCBDForward ? ", CBD-forward" : "";
+  return `I'm looking for a ${effectWord}, ${timingWord} ${productWord} with ${potencyWord} THC${cbdPart}${terpPart}.`;
+}
+
 function CounterCard({ parsed, result, onClose }) {
   const timingMeta = result.timing.includes("PM")
-    ? {icon:"moon", c:T.color.pm, text:"Best for evening or nighttime"}
+    ? {icon:"moon", c:T.color.pm}
     : result.timing.includes("AM")
-    ? {icon:"sun", c:T.color.am, text:"Good for daytime use"}
-    : {icon:"scale", c:T.color.bal, text:"Flexible — morning or evening"};
-  const productLabel = result.isVape ? "vape" : (parsed.productType||"flower");
-  const oneLiner = `${result.timing} · ${result.highType} · ${result.potency} potency ${productLabel}${result.topTerps.length>0?` · ${result.topTerps[0].displayName}-forward`:""}`;
+    ? {icon:"sun", c:T.color.am}
+    : {icon:"scale", c:T.color.bal};
+  const budtenderScript = buildBudtenderScript(parsed, result);
 
   return (
     <div style={{
@@ -685,9 +715,11 @@ function CounterCard({ parsed, result, onClose }) {
         <div style={{ textAlign:"center", marginBottom:"24px" }}>
           <div style={{ marginBottom:"10px" }}><Icon name={timingMeta.icon} size={36} color={timingMeta.c} /></div>
           <h2 style={{ fontFamily:T.font.display, fontSize:"24px", margin:"0 0 4px 0", color:T.color.text }}>
-            {parsed.strainName || "This Product"}
+            Show This at the Counter
           </h2>
-          <div style={{ fontSize:"13px", color:T.color.textSec, fontFamily:T.font.body }}>{timingMeta.text}</div>
+          <div style={{ fontSize:"13px", color:T.color.textSec, fontFamily:T.font.body }}>
+            Looking for something like this:
+          </div>
         </div>
 
         {/* Key numbers */}
@@ -727,12 +759,15 @@ function CounterCard({ parsed, result, onClose }) {
           </div>
         )}
 
-        {/* One-liner summary */}
-        <div style={{
-          background:T.color.surfaceAlt, borderRadius:T.radius.lg, padding:"14px 16px",
-          fontSize:"13px", lineHeight:1.55, color:T.color.textSec, fontFamily:T.font.mono,
-          marginBottom:"20px", letterSpacing:"0.01em",
-        }}>{oneLiner}</div>
+        {/* Budtender script */}
+        <div style={{ marginBottom:"20px" }}>
+          <div style={{ fontSize:"11px", color:T.color.textMuted, fontFamily:T.font.mono, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"8px" }}>Tell the budtender:</div>
+          <div style={{
+            background:T.color.surfaceAlt, borderRadius:T.radius.lg, padding:"16px 18px",
+            fontSize:"15px", lineHeight:1.65, color:T.color.text, fontFamily:T.font.body,
+            fontStyle:"italic", borderLeft:`3px solid ${T.color.green}`,
+          }}>{budtenderScript}</div>
+        </div>
 
         <Btn onClick={onClose} style={{ width:"100%", textAlign:"center" }}>Close</Btn>
       </div>
@@ -832,6 +867,22 @@ function HomeCard({ icon, title, desc, onClick }) {
 }
 
 // ─── RESULT CARD ────────────────────────────────────────────
+function getOutcomeTitle(result) {
+  const isPM = result.timing.includes("PM");
+  const isAM = result.timing.includes("AM");
+  const isBody = result.highType === "Body-heavy";
+  const isHead = result.highType === "Head / Cerebral";
+  if (isPM && isBody) return "Wind Down";
+  if (isPM && isHead) return "Easygoing Evening";
+  if (isPM) return "Evening Ease";
+  if (isAM && isHead) return "Daytime Clarity";
+  if (isAM && isBody) return "Focused Energy";
+  if (isAM) return "Morning Balance";
+  if (isBody) return "Calm & Grounded";
+  if (isHead) return "Clear & Focused";
+  return "Balanced & Grounded";
+}
+
 function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compact }) {
   const cbdHero = result.isCBDForward;
   const timingMeta = result.timing.includes("PM") ? {icon:"moon",label:"Evening-Leaning",bg:T.color.pmBg,c:T.color.pm}
@@ -860,15 +911,17 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
           {compact && <Icon name={heroMeta.icon} size={20} color={heroMeta.c} />}
           <div>
             <h2 style={{ margin:0, fontSize: compact?"17px":"22px", fontFamily:T.font.display, color:T.color.text }}>
-              {parsed.strainName || (cbdHero ? "CBD Product" : timingMeta.label)}
+              {parsed.strainName || (cbdHero ? "CBD-Forward" : getOutcomeTitle(result))}
             </h2>
             {parsed.strainName && !compact && <div style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.body, marginTop:"2px" }}>{heroMeta.label}</div>}
           </div>
         </div>
         {onSave && !compact && (
-          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-            {onCompare && <Btn small onClick={onCompare}>Compare</Btn>}
-            <Btn small onClick={onSave} disabled={saved}>{saved?"✓ Saved":"+ Save"}</Btn>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"8px",marginTop:"2px"}}>
+            <div style={{display:"flex",gap:"8px"}}>
+              {onCompare && <Btn small onClick={onCompare}>Compare</Btn>}
+              <Btn small onClick={onSave} disabled={saved}>{saved?"✓ Saved":"+ Save"}</Btn>
+            </div>
             {onCounter && <Btn small primary onClick={onCounter}><Icon name="shoppingBag" size={12} color={T.color.textInv} />Take to Counter</Btn>}
           </div>
         )}
@@ -879,9 +932,40 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
         <Pill bg={timingMeta.bg} color={timingMeta.c}>{result.timing}</Pill>
         <Pill>{result.highType}</Pill>
         <Pill bg={potencyColors.bg} color={potencyColors.c}>{result.potency}{result.potency==="Microdose"?"":" Potency"}</Pill>
-        {result.productLabel && <Pill bg={T.color.greenLight} color={T.color.green}>{result.productLabel}</Pill>}
+        {result.productLabel && result.productLabel !== "Flower" && <Pill bg={T.color.greenLight} color={T.color.green}>{result.productLabel}</Pill>}
         {cbdHero && <Pill bg={T.color.cbdBg} color={T.color.cbd}>CBD-Forward</Pill>}
       </div>
+
+      {!compact && (
+        <div style={{
+          background:T.color.surfaceAlt, borderRadius:T.radius.md,
+          padding:"14px 16px", marginBottom:"16px",
+          display:"flex", flexDirection:"column", gap:"8px",
+        }}>
+          {/* Primary */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.mono, textTransform:"uppercase", letterSpacing:"0.07em" }}>Best for</span>
+            <span style={{ fontSize:"14px", fontWeight:700, color:T.color.text, fontFamily:T.font.body }}>{result.timing}</span>
+          </div>
+          {/* Secondary */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.mono, textTransform:"uppercase", letterSpacing:"0.07em" }}>Effect profile</span>
+            <span style={{ fontSize:"13px", fontWeight:500, color:T.color.textSec, fontFamily:T.font.body }}>{result.highType}</span>
+          </div>
+          {/* Tertiary */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.mono, textTransform:"uppercase", letterSpacing:"0.07em" }}>Match strength</span>
+            <span style={{ fontSize:"12px", fontWeight:600, fontFamily:T.font.body,
+              color: result.matchStrength==="High" ? T.color.green
+                   : result.matchStrength==="Moderate" ? T.color.am
+                   : result.matchStrength==="Low" ? "#C2610A"
+                   : T.color.textSec,
+            }}>
+              {result.matchStrength}
+            </span>
+          </div>
+        </div>
+      )}
 
       {!compact && <div style={{ height:"1px", background:T.color.borderLight, margin:"0 0 16px 0" }} />}
 
@@ -1087,6 +1171,8 @@ export default function StrainSense() {
   const [showCounter, setShowCounter] = useState(false);
   const [ageVerified, setAgeVerified] = useState(() => !!localStorage.getItem(AGE_GATE_KEY));
   const [disclaimerSeen, setDisclaimerSeen] = useState(() => !!localStorage.getItem(DISCLAIMER_KEY));
+  const [scanNote, setScanNote] = useState(null);
+  const [debugLog, setDebugLog] = useState([]);
   const fileRef = useRef();
 
   const confirmAge = () => {
@@ -1116,6 +1202,7 @@ export default function StrainSense() {
     setView("home"); setTextInput(""); setImagePreview(null);
     setLoading(false); setError(null); setResult(null); setParsed(null);
     setJustSaved(false); setSelectedMood(null); setShowCounter(false);
+    setDebugLog([]);
   };
 
   const updateFeedback = (id, feedback) => {
@@ -1134,49 +1221,105 @@ export default function StrainSense() {
 
   // Core image analysis — shared by both native Camera and web file input paths
   const analyzeImageBase64 = async (b64, mt) => {
-    setError(null); setLoading(true);
+    setError(null); setScanNote(null); setDebugLog([]); setLoading(true);
+    const log = [];
+    const addLog = (msg) => { log.push(msg); console.log("[scan]", msg); };
+
     try {
+      // ── STEP 1: validate b64 ───────────────────────────────────
+      addLog(`b64: type=${typeof b64}, length=${b64?.length ?? "N/A"}, mt=${mt}`);
+      if (!b64 || typeof b64 !== "string") {
+        setError("Image conversion failed before OCR — b64 is not a valid string.");
+        setDebugLog(log); setLoading(false); return;
+      }
+
+      // ── STEP 2: proxy or direct ────────────────────────────────
       const proxyBase = import.meta.env.VITE_API_URL;
+      addLog(`proxyBase=${proxyBase || "(none — direct)"}`);
+
       let extracted = "";
+      let respStatus = null;
 
       if (proxyBase) {
-        // Production path — proxy keeps API key off device
-        const resp = await fetch(`${proxyBase}/api/analyze-image`, {
+        addLog(`Sending to /api/ocr, b64 size=${b64.length} chars (~${Math.round(b64.length * 0.75 / 1024)} KB)`);
+
+        // ── STEP 3: fetch ──────────────────────────────────────
+        const resp = await fetch(`${proxyBase}/api/ocr`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: b64, mediaType: mt }),
+          body: JSON.stringify({ imageBase64: b64 }),
         });
-        const data = await resp.json();
-        extracted = data.text || "";
+        respStatus = resp.status;
+        addLog(`Response status=${respStatus}`);
+
+        // ── STEP 4: read body as text first ───────────────────
+        const rawBody = await resp.text();
+        addLog(`Raw body (first 300): ${rawBody.slice(0, 300)}`);
+
+        // ── STEP 5: parse JSON safely ─────────────────────────
+        let data = null;
+        try {
+          data = JSON.parse(rawBody);
+          addLog(`provider=${data.provider}, keys: ${Object.keys(data).join(", ")}`);
+          if (data.debug) addLog(`debug: bytes=${data.debug.byteSize}, textLen=${data.debug.textLength}`);
+        } catch (jsonErr) {
+          addLog(`JSON parse FAILED: ${jsonErr.message}`);
+          setError(
+            `Image uploaded, but server returned a non-JSON response (status ${respStatus}).\n\nRaw: ${rawBody.slice(0, 200)}`
+          );
+          setDebugLog(log); setLoading(false); return;
+        }
+
+        // ── STEP 6: extract text ───────────────────────────────
+        addLog(`rawExtracted: "${String(data.text ?? "NULL").slice(0, 200)}"`);
+
+        if (data.error && !data.text) {
+          setError(`OCR error (status ${respStatus}): ${data.error}`);
+          setDebugLog(log); setLoading(false); return;
+        }
+
+        extracted = typeof data.text === "string" ? data.text : "";
       } else {
-        // Dev-only fallback — direct browser call (key must be in .env)
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method:"POST",
-          headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-          body:JSON.stringify({
-            model:"claude-sonnet-4-20250514", max_tokens:1000,
-            messages:[{role:"user",content:[
-              {type:"image",source:{type:"base64",media_type:mt,data:b64}},
-              {type:"text",text:`You are analyzing a cannabis product label. This could be flower, vape, edible, gummy, tincture, oil, capsule, or any cannabis product.\n\nExtract ALL data you can find. Return ONLY in this format, one item per line:\nStrain: [name if visible]\nProduct type: [flower/vape/cart/edible/gummy/tincture/capsule] (if visible)\nTHC: [number]% (if shown as percentage)\nTHC: [number] mg (if shown as milligrams per serving)\nCBD: [number]% (if shown as percentage)\nCBD: [number] mg (if shown as milligrams per serving)\nRatio: [CBD:THC ratio if shown, e.g. 1:1, 2:1, 20:1]\nServing size: [number] mg (if visible)\n[TerpeneName]: [number]%\n\nRules:\n- For edibles/gummies/tinctures, look for mg per serving, mg per piece, or mg per dose\n- If you see a CBD:THC ratio like "1:1" or "2:1", include it\n- Use standard terpene names (Myrcene, Limonene, Linalool, Caryophyllene, Pinene, Terpinolene, Humulene, Ocimene, Nerolidol, Bisabolol, Guaiol)\n- If "Beta-Caryophyllene" write "Caryophyllene", if "Beta-Myrcene" write "Myrcene"\n- Only include data you can clearly read\n- If not a cannabis product, say "NOT_CANNABIS_LABEL"`}
-            ]}],
-          }),
-        });
-        const data = await resp.json();
-        extracted = data.content?.map(c=>c.text||"").join("")||"";
+        addLog("No proxyBase — cannot run OCR without server");
+        setError("OCR requires a server connection. Please use the deployed app.");
+        setDebugLog(log); setLoading(false); return;
       }
 
-      if (!extracted.trim() || extracted.includes("NOT_CANNABIS_LABEL")) {
-        setError("Couldn't identify cannabis product data in that image. Try a clearer photo of the terpene panel, or paste the values manually.");
+      setDebugLog(log);
+
+      // ── STEP 7: empty text check ───────────────────────────────
+      if (!extracted.trim() || extracted.trim().length < 5) {
+        setError(`OCR returned no readable text (status: ${respStatus}). Image may be too blurry, dark, or in an unsupported format.`);
         setLoading(false); return;
       }
+
+      // ── STEP 8: parse ──────────────────────────────────────────
       const p = parseInput(extracted);
-      if (p.terpenes.length===0 && p.thc===null && p.thcMg===null && p.cbd===null && p.cbdMg===null) {
-        setError("Found text but couldn't parse product data. Try pasting the values manually.");
+      addLog(`Parsed: thc=${p.thc}, thcMg=${p.thcMg}, cbd=${p.cbd}, terps=${p.terpenes.length}`);
+      console.log("[scan] parsed:", p);
+
+      if (p.terpenes.length === 0 && p.thc === null && p.thcMg === null && p.cbd === null && p.cbdMg === null) {
+        setError(
+          `OCR returned text, but parsing found no cannabis values.\n\n` +
+          `Extracted text:\n"${extracted.slice(0, 300)}"`
+        );
         setLoading(false); return;
       }
+
+      const hasTerps = p.terpenes.length >= 2;
+      const hasThc = p.thc !== null || p.thcMg !== null;
+      setScanNote(
+        !hasTerps && !hasThc ? "Partial data extracted — best-fit estimate from limited signal." :
+        (!hasTerps || !hasThc) ? "Likely profile based on partial label text." :
+        null
+      );
+
       setParsed(p); setResult(classify(p, tolerance)); setView("result");
-    } catch {
-      setError("Image analysis failed. Try pasting the values manually.");
+    } catch (err) {
+      log.push(`CATCH: ${err?.name}: ${err?.message}`);
+      setDebugLog(log);
+      console.error("[scan] error:", err);
+      setError(`Error: ${err?.name ? `[${err.name}] ` : ""}${err?.message || "Image analysis failed. Try pasting values manually."}`);
     }
     setLoading(false);
   };
@@ -1185,14 +1328,16 @@ export default function StrainSense() {
   const handleImageNative = async () => {
     try {
       const image = await Camera.getPhoto({
-        quality: 85,
+        quality: 90,
         allowEditing: false,
-        resultType: CameraResultType.Base64,
+        resultType: CameraResultType.DataUrl,
         source: CameraSource.Photos,
       });
-      const b64 = image.base64String;
-      const mt = `image/${image.format || "jpeg"}`;
-      setImagePreview(`data:${mt};base64,${b64}`);
+      const dataUrl = image.dataUrl;
+      if (!dataUrl) { setError("Couldn't load image. Try again."); return; }
+      const mt = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
+      const b64 = dataUrl.split(",")[1];
+      setImagePreview(dataUrl);
       setView("image");
       await analyzeImageBase64(b64, mt);
     } catch (e) {
@@ -1203,19 +1348,46 @@ export default function StrainSense() {
     }
   };
 
-  // Web fallback — standard file input (used in browser dev only)
+  // Web fallback — uses createObjectURL + canvas to handle HEIC on iOS Safari
+  // Resizes to max 1200px and compresses to target ~500 KB before sending
   const handleImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setView("image");
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const b64Full = ev.target.result;
-      setImagePreview(b64Full);
-      const b64 = b64Full.split(",")[1];
-      await analyzeImageBase64(b64, file.type || "image/jpeg");
-    };
-    reader.readAsDataURL(file);
+    setLoading(true);
+    setError(null);
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        URL.revokeObjectURL(objectUrl);
+        const MAX_SIDE = 1200;
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (w > MAX_SIDE || h > MAX_SIDE) {
+          if (w >= h) { h = Math.round(h * MAX_SIDE / w); w = MAX_SIDE; }
+          else { w = Math.round(w * MAX_SIDE / h); h = MAX_SIDE; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.70);
+        setImagePreview(dataUrl);
+        const b64 = dataUrl.split(",")[1];
+        await analyzeImageBase64(b64, "image/jpeg");
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        setError("Couldn't load this image. Try a different photo.");
+        setLoading(false);
+      };
+      img.src = objectUrl;
+    } catch(err) {
+      setError("Error loading image: " + (err?.message || "unknown"));
+      setLoading(false);
+    }
   };
 
   const openImagePicker = () => {
@@ -1262,7 +1434,7 @@ export default function StrainSense() {
             margin:"0 0 3px 0", letterSpacing:"-0.01em", color:T.color.text,
           }}>Strain Sense</h1>
           <p style={{ fontSize:"13px", color:T.color.textMuted, margin:0, fontFamily:T.font.body, fontWeight:300 }}>
-            Make sense of what you're smoking.
+            Make sense of your experience.
           </p>
         </div>
 
@@ -1320,10 +1492,10 @@ export default function StrainSense() {
         {/* ════════════════════════════════════════════════ */}
         {view==="home" && (
           <div style={{ display:"flex", flexDirection:"column", gap:"12px", animation:"ssReveal 0.35s ease-out" }}>
-            <HomeCard icon="camera" title="Analyze Photo"
-              desc="Product label, terpene panel, or dispensary screenshot"
+            <HomeCard icon="camera" title="Scan Product"
+              desc="Photo of a label, menu, or terpene panel"
               onClick={()=>{ setView("image"); setTimeout(openImagePicker, 100); }} />
-            <HomeCard icon="fileText" title="Paste Terpene Profile"
+            <HomeCard icon="fileText" title="Enter Product Profile"
               desc="Type or paste THC, terpenes, and percentages"
               onClick={()=>setView("text")} />
             <HomeCard icon="compass" title="How Do You Want to Feel?"
@@ -1405,7 +1577,7 @@ export default function StrainSense() {
               </>
             )}
 
-            <div style={{display:"flex",gap:"8px",marginTop:"12px"}}>
+<div style={{display:"flex",gap:"8px",marginTop:"12px"}}>
               <Btn onClick={reset}>← Back</Btn>
               {imagePreview && !loading && <Btn onClick={openImagePicker} style={{flex:1}}>Try different photo</Btn>}
             </div>
@@ -1423,13 +1595,18 @@ export default function StrainSense() {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"16px" }}>
               {MOOD_PRESETS.map(m => (
-                <div key={m.id} onClick={()=>setSelectedMood(m.id===selectedMood?null:m.id)} style={{
+                <div key={m.id} onClick={()=>{ setSelectedMood(m.id); setView("moodResult"); }} style={{
                   background:T.color.surface, borderRadius:T.radius.lg, padding:"16px",
-                  border:`1.5px solid ${selectedMood===m.id?T.color.greenMuted:T.color.borderLight}`,
-                  cursor:"pointer", transition:"all 0.15s",
-                  boxShadow:selectedMood===m.id?T.shadow.hover:T.shadow.sm,
-                }}>
-                  <div style={{marginBottom:"8px"}}><Icon name={m.icon} size={22} color={selectedMood===m.id?T.color.green:T.color.textMuted} /></div>
+                  border:`1.5px solid ${T.color.borderLight}`,
+                  cursor:"pointer", transition:"all 0.12s",
+                  boxShadow:T.shadow.sm,
+                }}
+                onMouseDown={e=>e.currentTarget.style.transform="scale(0.97)"}
+                onMouseUp={e=>e.currentTarget.style.transform="scale(1)"}
+                onTouchStart={e=>e.currentTarget.style.opacity="0.75"}
+                onTouchEnd={e=>e.currentTarget.style.opacity="1"}
+                >
+                  <div style={{marginBottom:"8px"}}><Icon name={m.icon} size={22} color={T.color.textMuted} /></div>
                   <div style={{fontFamily:T.font.display,fontSize:"15px",color:T.color.text,marginBottom:"2px"}}>{m.label}</div>
                   <div style={{fontSize:"12px",color:T.color.textMuted}}>{m.desc}</div>
                 </div>
@@ -1438,7 +1615,6 @@ export default function StrainSense() {
 
             <div style={{display:"flex",gap:"8px"}}>
               <Btn onClick={reset}>← Back</Btn>
-              <Btn primary disabled={!selectedMood} onClick={()=>setView("moodResult")} style={{flex:1}}>Show Me →</Btn>
             </div>
           </div>
         )}
@@ -1487,14 +1663,16 @@ export default function StrainSense() {
                     {mood.timing}
                   </Pill>
                   <Pill>{mood.highType}</Pill>
+                  <Pill bg="#FFF3E0" color="#C2610A">THC: {mood.thcRange}</Pill>
                 </div>
 
-                <div style={{
-                  background:T.color.surfaceAlt, borderRadius:T.radius.lg, padding:"18px",
-                  fontSize:"14px", lineHeight:1.6, color:T.color.textSec, fontFamily:T.font.body,
-                }}>
-                  When shopping, look for products where {mood.terpenes.map(t=>DISPLAY[t]||t).join(", ")} appear as dominant terpenes. These are most commonly associated with {mood.desc.toLowerCase()} effects. Individual response varies — this is a starting point, not a guarantee.
-                </div>
+                {mood.note && (
+                  <div style={{
+                    background:T.color.surfaceAlt, borderRadius:T.radius.lg, padding:"16px",
+                    fontSize:"14px", lineHeight:1.65, color:T.color.textSec, fontFamily:T.font.body,
+                    marginTop:"4px",
+                  }}>{mood.note}</div>
+                )}
 
                 {mood.extra && (
                   <div style={{
@@ -1547,6 +1725,16 @@ export default function StrainSense() {
         {/* ════════════════════════════════════════════════ */}
         {view==="result" && result && parsed && (
           <div style={{animation:"ssReveal 0.35s ease-out"}}>
+            {scanNote && (
+              <div style={{
+                background:T.color.amBg, borderRadius:T.radius.md, padding:"10px 14px",
+                fontSize:"13px", color:T.color.am, fontFamily:T.font.body, marginBottom:"12px",
+                display:"flex", gap:"8px", alignItems:"center",
+              }}>
+                <Icon name="info" size={14} color={T.color.am} />
+                {scanNote}
+              </div>
+            )}
             <ResultCard
               parsed={parsed} result={result}
               onSave={saveProduct} saved={justSaved}
