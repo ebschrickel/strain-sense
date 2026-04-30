@@ -47,5 +47,12 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+	<key>NSCameraUsageDescription</key>
+	<string>StrainSense uses your camera to scan cannabis strain labels and flower for identification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>StrainSense can analyze photos from your library to identify cannabis strains.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>StrainSense can save strain scan results to your photo library.</string>
 </dict>
 </plist>

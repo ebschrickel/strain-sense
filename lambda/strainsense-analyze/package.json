@@ -1,0 +1,9 @@
+{
+  "name": "strainsense-analyze",
+  "version": "1.0.0",
+  "description": "StrainSense Anthropic Claude Vision Lambda function",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-ssm": "^3.0.0"
+  }
+}

@@ -1,5 +1,5 @@
 {
-	"appId": "com.openpaw.strainsense",
+	"appId": "com.resonantlabs.strainsense",
 	"appName": "Strain Sense",
 	"webDir": "dist",
 	"plugins": {
