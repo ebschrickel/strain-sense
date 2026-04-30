@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import SourcesScreen from "./SourcesScreen";
 
 // ═══════════════════════════════════════════════════════════
 // STRAIN SENSE v3 — Make sense of what you're taking.
@@ -129,7 +130,72 @@ const NOTES = {
   guaiol:"mild relaxation and grounding",
 };
 
+// ─── CITATIONS ───────────────────────────────────────────────
+// Maps each terpene/claim to source IDs in src/sources.js.
+// Required by App Store Review Guideline 1.4.1.
+const TERPENE_CITATIONS = {
+  myrcene:           [1, 3, 5],
+  betamyrcene:       [1, 3, 5],
+  linalool:          [3, 7],
+  nerolidol:         [3],
+  limonene:          [1, 3, 6],
+  pinene:            [1, 3, 8],
+  alphapinene:       [1, 3, 8],
+  betapinene:        [1, 3, 8],
+  terpinolene:       [1, 2],
+  ocimene:           [2],
+  caryophyllene:     [3, 9],
+  betacaryophyllene: [3, 9],
+  humulene:          [3],
+  bisabolol:         [3],
+  guaiol:            [3],
+};
+// General-purpose citation sets used in copy outside the per-terpene UI.
+const ENTOURAGE_CITATIONS = [1, 4];   // terpenes matter alongside THC%
+const CBD_RATIO_CITATIONS = [10];     // CBD safety / ratio guidance
+const SAFETY_CITATIONS    = [11];     // National Academies consensus
+
 function norm(n) { return n.toLowerCase().replace(/[^a-z]/g,""); }
+
+// Inline citation markers — render as [N] [N] tappable to Sources screen.
+// Uses a global window callback set by the StrainSense component on mount.
+function CitationMarks({ ids }) {
+  if (!ids || !ids.length) return null;
+  const open = (id) => {
+    if (typeof window !== "undefined" && typeof window.__ssOpenSources === "function") {
+      window.__ssOpenSources(id);
+    }
+  };
+  return (
+    <span style={{ marginLeft: "4px", whiteSpace: "nowrap" }}>
+      {ids.map((id) => (
+        <button
+          key={id}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); open(id); }}
+          aria-label={`Citation ${id}. Tap for source details.`}
+          style={{
+            background: "none",
+            border: "none",
+            padding: "2px 4px",
+            marginRight: "1px",
+            color: "#4d6b3d",
+            fontFamily: "'IBM Plex Mono', system-ui, monospace",
+            fontSize: "10px",
+            fontWeight: 600,
+            cursor: "pointer",
+            verticalAlign: "super",
+            lineHeight: 1,
+            minHeight: "24px",
+            minWidth: "24px",
+          }}
+        >
+          [{id}]
+        </button>
+      ))}
+    </span>
+  );
+}
 
 function parseInput(text) {
   const r = { thc:null, cbd:null, thcMg:null, cbdMg:null, ratio:null, terpenes:[], productType:null, totalTerpenes:null, strainName:null, servingSize:null, terpeneWarnings:[] };
@@ -1000,7 +1066,10 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
               borderLeft:`4px solid ${T.color.greenMuted}`, borderRadius:T.radius.md, padding:"14px 16px",
               fontSize:"15px", lineHeight:1.7, color:T.color.text, fontFamily:T.font.body,
               background:T.color.surfaceAlt,
-            }}>{result.explanation}</div>
+            }}>
+              {result.explanation}
+              <CitationMarks ids={ENTOURAGE_CITATIONS} />
+            </div>
           </div>
 
           {(parsed.terpeneWarnings?.length > 0 || result.cautions.length > 0) && (
@@ -1012,9 +1081,20 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
           )}
           {result.cautions.length>0 && <div style={{marginTop:"10px"}}><Alert variant="warn">{result.cautions.join(" ")}</Alert></div>}
 
-          <div style={{ marginTop:"14px", borderTop:`1px solid ${T.color.borderLight}`, paddingTop:"8px" }}>
-            <div style={{ fontSize:"11px", color:T.color.textFaint, fontFamily:T.font.mono, letterSpacing:"0.05em", textAlign:"center" }}>
-              Guide only — not medical advice. Individual experience varies.
+          <div style={{ marginTop:"14px", borderTop:`1px solid ${T.color.borderLight}`, paddingTop:"10px" }}>
+            <div style={{ fontSize:"11px", color:T.color.textFaint, fontFamily:T.font.mono, letterSpacing:"0.05em", textAlign:"center", lineHeight:1.6 }}>
+              Educational guide based on peer-reviewed research<CitationMarks ids={SAFETY_CITATIONS} /><br/>
+              Not medical advice. Individual experience varies.{" "}
+              <button
+                type="button"
+                onClick={() => window.__ssOpenSources && window.__ssOpenSources()}
+                style={{
+                  background:"none", border:"none", padding:"4px 6px",
+                  color:T.color.green, fontFamily:T.font.mono, fontSize:"11px",
+                  textDecoration:"underline", cursor:"pointer",
+                  letterSpacing:"0.05em",
+                }}
+              >View sources</button>
             </div>
           </div>
         </>
@@ -1155,8 +1235,10 @@ function QuickCompare({ entryA, saved, onPickB, onBack }) {
 // ═══════════════════════════════════════════════════════════
 
 export default function StrainSense() {
-  // Views: home | text | image | result | saved | compare | mood | moodResult
+  // Views: home | text | image | result | saved | compare | mood | moodResult | sources
   const [view, setView] = useState("home");
+  const [sourceFocus, setSourceFocus] = useState(null);
+  const [prevView, setPrevView] = useState("home");
   const [textInput, setTextInput] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1187,6 +1269,16 @@ export default function StrainSense() {
 
   // Persist tolerance
   useEffect(() => { localStorage.setItem(TOLERANCE_KEY, tolerance); }, [tolerance]);
+
+  // Expose a global hook so inline citation markers ([N]) route to Sources.
+  useEffect(() => {
+    window.__ssOpenSources = (id) => {
+      setPrevView((curr) => (view === "sources" ? curr : view));
+      setSourceFocus(id || null);
+      setView("sources");
+    };
+    return () => { delete window.__ssOpenSources; };
+  }, [view]);
 
   // Load saved on mount
   useEffect(() => {
@@ -1442,20 +1534,34 @@ export default function StrainSense() {
         {!disclaimerSeen && (
           <div style={{
             background:T.color.surfaceAlt, border:`1px solid ${T.color.borderLight}`,
-            borderRadius:T.radius.lg, padding:"13px 40px 13px 16px",
+            borderRadius:T.radius.lg, padding:"14px 40px 14px 16px",
             marginBottom:"20px", fontSize:"13px", color:T.color.textSec,
             lineHeight:1.6, position:"relative",
             borderLeft:`3px solid ${T.color.greenMuted}`,
           }}>
             <strong style={{ color:T.color.text }}>Educational use only.</strong>{" "}
-            Information about cannabis terpenes and cannabinoids. Not medical advice.
-            Effects vary. Consult a healthcare professional if you have medical conditions.
+            Strain Sense provides general information based on peer-reviewed terpene
+            and cannabis research. It is not medical advice, diagnosis, or treatment.
+            Effects vary by individual and product. Always consult a licensed
+            healthcare provider, especially if you are pregnant, nursing, taking
+            medication, or have a medical condition.{" "}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); window.__ssOpenSources && window.__ssOpenSources(); }}
+              style={{
+                background:"none", border:"none", padding:0,
+                color:T.color.green, fontWeight:500, cursor:"pointer",
+                fontSize:"13px", textDecoration:"underline",
+                fontFamily:"inherit",
+              }}
+            >View sources →</button>
             <button
               onClick={dismissDisclaimer}
               style={{
                 position:"absolute", top:"10px", right:"12px",
                 background:"none", border:"none", cursor:"pointer",
                 fontSize:"18px", color:T.color.textMuted, lineHeight:1, fontWeight:300,
+                minWidth:"24px", minHeight:"24px",
               }}
               aria-label="Dismiss"
             >×</button>
@@ -1645,12 +1751,15 @@ export default function StrainSense() {
                   {mood.terpenes.map(t => {
                     const display = DISPLAY[t] || t;
                     const note = NOTES[t];
+                    const cites = TERPENE_CITATIONS[t] || [];
                     return (
                       <div key={t} style={{
                         background:T.color.greenLight, borderRadius:T.radius.lg, padding:"14px 16px",
                         flex:"1 1 auto", minWidth:"140px",
                       }}>
-                        <div style={{fontFamily:T.font.display,fontSize:"15px",color:T.color.green,marginBottom:"2px"}}>{display}</div>
+                        <div style={{fontFamily:T.font.display,fontSize:"15px",color:T.color.green,marginBottom:"2px"}}>
+                          {display}<CitationMarks ids={cites} />
+                        </div>
                         {note && <div style={{fontSize:"12px",color:T.color.textMuted,lineHeight:1.4}}>{note}</div>}
                       </div>
                     );
@@ -1671,7 +1780,10 @@ export default function StrainSense() {
                     background:T.color.surfaceAlt, borderRadius:T.radius.lg, padding:"16px",
                     fontSize:"14px", lineHeight:1.65, color:T.color.textSec, fontFamily:T.font.body,
                     marginTop:"4px",
-                  }}>{mood.note}</div>
+                  }}>
+                    {mood.note}
+                    <CitationMarks ids={ENTOURAGE_CITATIONS} />
+                  </div>
                 )}
 
                 {mood.extra && (
@@ -1780,6 +1892,45 @@ export default function StrainSense() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+
+        {/* ════════════════════════════════════════════════ */}
+        {/* SOURCES & CITATIONS                             */}
+        {/* ════════════════════════════════════════════════ */}
+        {view==="sources" && (
+          <SourcesScreen
+            focusId={sourceFocus}
+            onBack={() => {
+              setSourceFocus(null);
+              setView(prevView || "home");
+            }}
+          />
+        )}
+
+
+        {/* ── PERSISTENT FOOTER LINK (Sources & Citations) ── */}
+        {view !== "sources" && (
+          <div style={{
+            marginTop: "32px", paddingTop: "16px",
+            borderTop: `1px solid ${T.color.borderLight}`,
+            textAlign: "center",
+          }}>
+            <button
+              type="button"
+              onClick={() => { setPrevView(view); setSourceFocus(null); setView("sources"); }}
+              style={{
+                background: "none", border: "none", padding: "8px 12px",
+                color: T.color.textMuted, fontFamily: T.font.mono,
+                fontSize: "11px", letterSpacing: "0.05em",
+                cursor: "pointer", textDecoration: "underline",
+                minHeight: "44px",
+              }}
+              aria-label="Open Sources and Citations screen"
+            >
+              Sources &amp; Citations
+            </button>
           </div>
         )}
 
