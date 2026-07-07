@@ -8,65 +8,71 @@ import SourcesScreen from "./SourcesScreen";
 // ═══════════════════════════════════════════════════════════
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────
+// Obsidian Frost — dark botanical glass. Translucent surfaces sit over a
+// fixed aurora gradient; `T.glass` adds the frost, `T.grad` is the CTA fill.
 const T = {
   color: {
-    bg:           "#f3f1ea",
-    bgDeep:       "#eae7dc",
-    surface:      "#faf9f5",
-    surfaceAlt:   "#f0ede4",
-    white:        "#ffffff",
-    border:       "#dedad2",
-    borderLight:  "#eae6dc",
+    bg:           "#0e120d",
+    bgDeep:       "#0a0c09",
+    surface:      "rgba(255,255,255,0.065)",
+    surfaceAlt:   "rgba(255,255,255,0.05)",
+    white:        "rgba(255,255,255,0.10)",
+    border:       "rgba(255,255,255,0.14)",
+    borderLight:  "rgba(255,255,255,0.09)",
 
-    text:         "#2c2c24",
-    textSec:      "#5c5c50",
-    textMuted:    "#908e82",
-    textFaint:    "#b4b2a6",
-    textInv:      "#faf9f5",
+    text:         "#eef1e8",
+    textSec:      "#b9bfae",
+    textMuted:    "#7e8476",
+    textFaint:    "#5b6055",
+    textInv:      "#0d120a",
 
-    green:        "#4d6b3d",
-    greenDeep:    "#3b5530",
-    greenLight:   "#e6efe0",
-    greenMuted:   "#8aaa76",
+    green:        "#a4cc86",
+    greenDeep:    "#c0dfa8",
+    greenLight:   "rgba(164,204,134,0.12)",
+    greenMuted:   "#7ba05e",
 
-    am:           "#c49f1a",
-    amBg:         "#fdf7e2",
-    pm:           "#6e70a8",
-    pmBg:         "#ededf6",
-    bal:          "#6d8060",
-    balBg:        "#e8ede5",
+    am:           "#e0c25a",
+    amBg:         "rgba(224,194,90,0.12)",
+    pm:           "#a3a6de",
+    pmBg:         "rgba(146,149,210,0.14)",
+    bal:          "#9db38c",
+    balBg:        "rgba(157,179,140,0.13)",
 
-    warn:         "#b54e3a",
-    warnBg:       "#f8e8e2",
-    warnText:     "#904030",
+    warn:         "#e07856",
+    warnBg:       "rgba(224,120,86,0.13)",
+    warnText:     "#f0a385",
 
-    liked:        "#4d6b3d",
-    likedBg:      "#e6efe0",
-    neutral:      "#908e82",
-    neutralBg:    "#f0ede4",
-    disliked:     "#b54e3a",
-    dislikedBg:   "#f8e8e2",
+    liked:        "#a4cc86",
+    likedBg:      "rgba(164,204,134,0.14)",
+    neutral:      "#8b9082",
+    neutralBg:    "rgba(255,255,255,0.07)",
+    disliked:     "#e07856",
+    dislikedBg:   "rgba(224,120,86,0.14)",
 
-    cbd:          "#2e7d6e",
-    cbdBg:        "#e2f2ee",
-    cbdLight:     "#d0ebe5",
-    pain:         "#8b5e3c",
-    painBg:       "#f5ede4",
+    cbd:          "#6fd3bd",
+    cbdBg:        "rgba(111,211,189,0.12)",
+    cbdLight:     "rgba(111,211,189,0.22)",
+    pain:         "#d8a878",
+    painBg:       "rgba(216,168,120,0.12)",
   },
   font: {
-    display:  "'DM Serif Display', Georgia, system-ui, serif",
-    body:     "'Libre Franklin', 'Helvetica Neue', system-ui, sans-serif",
-    mono:     "'IBM Plex Mono', system-ui, monospace",
+    display:  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
+    body:     "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif",
+    mono:     "ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, monospace",
   },
-  radius: { sm: "8px", md: "12px", lg: "16px", pill: "24px", full: "9999px" },
+  radius: { sm: "10px", md: "14px", lg: "22px", pill: "999px", full: "9999px" },
   shadow: {
-    sm: "0 1px 4px rgba(44,44,36,0.06)",
-    md: "0 3px 14px rgba(44,44,36,0.08)",
-    hover: "0 4px 18px rgba(77,107,61,0.14)",
+    sm: "0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10)",
+    md: "0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.13)",
+    hover: "0 12px 36px rgba(0,0,0,0.5), 0 0 24px rgba(164,204,134,0.15), inset 0 1px 0 rgba(255,255,255,0.14)",
   },
+  glass: {
+    backdropFilter: "blur(28px) saturate(1.4)",
+    WebkitBackdropFilter: "blur(28px) saturate(1.4)",
+  },
+  grad: "linear-gradient(180deg, #6d9852, #52783c)",
+  gradGlow: "0 10px 28px rgba(109,152,82,0.35), inset 0 1px 0 rgba(255,255,255,0.30)",
 };
-
-const FONT_URL = "https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Libre+Franklin:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap";
 
 // ─── ICON SYSTEM ─────────────────────────────────────────────
 // All icons: 24×24 viewBox, stroke-only, 1.5px weight, currentColor.
@@ -179,8 +185,8 @@ function CitationMarks({ ids }) {
             border: "none",
             padding: "2px 4px",
             marginRight: "1px",
-            color: "#4d6b3d",
-            fontFamily: "'IBM Plex Mono', system-ui, monospace",
+            color: T.color.green,
+            fontFamily: T.font.mono,
             fontSize: "10px",
             fontWeight: 600,
             cursor: "pointer",
@@ -259,6 +265,12 @@ function parseInput(text) {
     }
   }
 
+  return finalizeParsed(r);
+}
+
+// Shared tail of parsing — used by both free-text paste parsing and the
+// guided form, so both entry paths produce identical `parsed` objects.
+function finalizeParsed(r) {
   // Infer product type
   if (!r.productType) {
     if (r.thcMg || r.cbdMg) r.productType = "edible";
@@ -275,7 +287,7 @@ function parseInput(text) {
 
   r.terpenes.sort((a,b) => b.value - a.value);
   for (const t of r.terpenes) {
-    if (t.value > 2) r.terpeneWarnings.push(`${t.displayName} at ${t.value}% seems unusually high — double-check this value.`);
+    if (!t.noPct && t.value > 2) r.terpeneWarnings.push(`${t.displayName} at ${t.value}% seems unusually high — double-check this value.`);
   }
   if (r.totalTerpenes !== null && r.totalTerpenes > 5) {
     r.terpeneWarnings.push(`Total terpenes at ${r.totalTerpenes}% is very high — may indicate a measurement error or added terpenes.`);
@@ -545,14 +557,17 @@ function AgeGate({ onConfirm }) {
   return (
     <div style={{
       position:"fixed", inset:0, zIndex:9999,
-      background:T.color.bg,
+      background: `
+        radial-gradient(70% 42% at 80% -5%, rgba(94,148,74,0.28) 0%, transparent 60%),
+        radial-gradient(80% 50% at 50% 112%, rgba(52,92,60,0.30) 0%, transparent 62%),
+        linear-gradient(178deg, #0e120d 0%, #0a0c09 100%)`,
       display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center",
       padding:"40px 28px", textAlign:"center",
       fontFamily:T.font.body,
     }}>
       <div style={{ marginBottom:"20px" }}><Icon name="leaf" size={40} color={T.color.green} /></div>
-      <h1 style={{ fontFamily:T.font.display, fontSize:"26px", fontWeight:400, color:T.color.text, margin:"0 0 12px 0", letterSpacing:"-0.01em" }}>
+      <h1 style={{ fontFamily:T.font.display, fontSize:"28px", fontWeight:750, color:T.color.text, margin:"0 0 12px 0", letterSpacing:"-0.03em" }}>
         Strain Sense
       </h1>
       <p style={{ fontSize:"15px", color:T.color.textSec, marginBottom:"36px", maxWidth:"300px", lineHeight:1.65, fontFamily:T.font.body }}>
@@ -562,10 +577,11 @@ function AgeGate({ onConfirm }) {
       <button
         onClick={onConfirm}
         style={{
-          background:T.color.green, color:T.color.textInv,
-          border:"none", borderRadius:T.radius.md,
-          padding:"15px 32px", fontSize:"15px", fontWeight:500,
-          fontFamily:T.font.display, letterSpacing:"0.01em",
+          background:T.grad, color:T.color.textInv,
+          border:"none", borderRadius:"18px",
+          padding:"15px 32px", fontSize:"15px", fontWeight:650,
+          fontFamily:T.font.body, letterSpacing:"-0.01em",
+          boxShadow:T.gradGlow,
           cursor:"pointer", marginBottom:"20px", width:"100%", maxWidth:"300px",
         }}
       >
@@ -688,14 +704,16 @@ function Btn({ children, primary, small, onClick, disabled, style: sx }) {
       padding: small ? "7px 16px" : "11px 20px",
       borderRadius: small ? T.radius.pill : T.radius.md,
       border: primary ? "none" : `1px solid ${disabled ? T.color.borderLight : T.color.border}`,
-      background: primary
-        ? T.color.green
-        : disabled ? T.color.surfaceAlt : T.color.surface,
-      color: primary ? T.color.textInv : disabled ? T.color.textMuted : T.color.textSec,
+      background: disabled
+        ? T.color.surfaceAlt
+        : primary ? T.grad : T.color.surface,
+      boxShadow: primary && !disabled ? T.gradGlow : "none",
+      color: disabled ? T.color.textMuted : primary ? T.color.textInv : T.color.textSec,
       cursor: disabled ? "default" : "pointer",
       fontSize: small ? "12px" : "14px",
-      fontWeight: primary ? 500 : 450,
-      fontFamily: primary ? T.font.display : T.font.mono,
+      fontWeight: primary ? 650 : 500,
+      fontFamily: T.font.body,
+      letterSpacing: "-0.01em",
       transition: "all 0.15s",
       ...sx,
     }}>{children}</button>
@@ -768,19 +786,22 @@ function CounterCard({ parsed, result, onClose }) {
 
   return (
     <div style={{
-      position:"fixed", inset:0, background:"rgba(44,44,36,0.55)",
+      position:"fixed", inset:0, background:"rgba(5,7,5,0.60)",
+      backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
       display:"flex", alignItems:"center", justifyContent:"center",
       zIndex:1000, padding:"20px",
     }} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{
-        background:T.color.surface, borderRadius:T.radius.lg,
+        background:"rgba(24,28,22,0.85)", borderRadius:T.radius.lg,
+        border:`1px solid ${T.color.border}`,
         padding:"32px 28px", maxWidth:"400px", width:"100%",
-        boxShadow:"0 8px 40px rgba(44,44,36,0.18)",
+        boxShadow:"0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.14)",
+        ...T.glass,
       }}>
         {/* Header */}
         <div style={{ textAlign:"center", marginBottom:"24px" }}>
           <div style={{ marginBottom:"10px" }}><Icon name={timingMeta.icon} size={36} color={timingMeta.c} /></div>
-          <h2 style={{ fontFamily:T.font.display, fontSize:"24px", margin:"0 0 4px 0", color:T.color.text }}>
+          <h2 style={{ fontFamily:T.font.display, fontSize:"23px", fontWeight:750, letterSpacing:"-0.02em", margin:"0 0 4px 0", color:T.color.text }}>
             Show This at the Counter
           </h2>
           <div style={{ fontSize:"13px", color:T.color.textSec, fontFamily:T.font.body }}>
@@ -851,7 +872,7 @@ function RatioCard({ ratioProfile }) {
       border:`1px solid ${T.color.cbd}33`, marginTop:"16px",
     }}>
       <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"12px" }}>
-        <div style={{ fontFamily:T.font.display, fontSize:"16px", color:T.color.cbd }}>CBD:THC Ratio</div>
+        <div style={{ fontFamily:T.font.display, fontSize:"16px", fontWeight:650, letterSpacing:"-0.01em", color:T.color.cbd }}>CBD:THC Ratio</div>
         <Pill small bg={T.color.cbdLight} color={T.color.cbd}>{rp.ratio.label}</Pill>
         <Pill small bg={T.color.cbdLight} color={T.color.cbd}>{rp.category}</Pill>
       </div>
@@ -896,12 +917,259 @@ function UseCaseBadges({ useCases }) {
           }}>
             <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"5px" }}>
               <Icon name={uc.icon} size={16} color={T.color.green} />
-              <span style={{ fontFamily:T.font.display, fontSize:"14px", color:T.color.text }}>{uc.label}</span>
+              <span style={{ fontFamily:T.font.display, fontSize:"14px", fontWeight:650, color:T.color.text }}>{uc.label}</span>
               <Pill small bg={uc.strength==="Strong match"?T.color.greenLight:T.color.surfaceAlt} color={uc.strength==="Strong match"?T.color.green:T.color.textMuted}>{uc.strength}</Pill>
             </div>
             <div style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.body, lineHeight:1.5 }}>{uc.note}</div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── GUIDED PRODUCT FORM ────────────────────────────────────
+// Paste-first entry: paste the label text and auto-fill, or tap in the
+// details. Terpenes are selectable chips; percentages are optional.
+const COMMON_TERPENES = ["myrcene","limonene","caryophyllene","linalool","pinene","terpinolene","humulene","ocimene","bisabolol","nerolidol","guaiol"];
+const PRODUCT_TYPES = [
+  { key:"flower",      label:"Flower" },
+  { key:"vape",        label:"Vape / Cart" },
+  { key:"edible",      label:"Edible / Gummy" },
+  { key:"tincture",    label:"Tincture / Oil" },
+  { key:"capsule",     label:"Capsule" },
+  { key:"concentrate", label:"Concentrate" },
+];
+// Nominal scoring weight for a terpene listed without a percentage.
+const NO_PCT_WEIGHT = 0.3;
+
+const FIELD_STYLE = {
+  width:"100%", padding:"13px 14px", borderRadius:T.radius.md,
+  border:`1px solid ${T.color.border}`, background:T.color.surfaceAlt,
+  color:T.color.text, fontSize:"16px", fontFamily:T.font.body,
+  boxShadow:"inset 0 1px 2px rgba(0,0,0,0.25)",
+};
+
+function FormLabel({ children }) {
+  return (
+    <div style={{ fontSize:"11px", color:T.color.textMuted, letterSpacing:"0.08em", fontFamily:T.font.mono, textTransform:"uppercase", marginBottom:"8px" }}>
+      {children}
+    </div>
+  );
+}
+
+function ProductForm({ onAnalyze, onBack }) {
+  const [form, setForm] = useState({ strainName:"", productType:null, thc:"", cbd:"", thcMg:"", cbdMg:"", terps:{} });
+  const [paste, setPaste] = useState("");
+  const [note, setNote] = useState(null);
+  const [error, setError] = useState(null);
+
+  const setF = (key, value) => setForm(f => ({ ...f, [key]: value }));
+  const isEdibleTy = EDIBLE_TYPES.includes(form.productType);
+
+  const toggleTerp = (name) => setForm(f => {
+    const terps = { ...f.terps };
+    if (name in terps) delete terps[name];
+    else terps[name] = "";
+    return { ...f, terps };
+  });
+
+  const applyPaste = () => {
+    const r = parseInput(paste);
+    const empty = r.terpenes.length===0 && r.thc===null && r.thcMg===null && r.cbd===null && r.cbdMg===null && !r.strainName;
+    if (empty) {
+      setNote("Couldn't find product data in that text — you can still fill in the fields below.");
+      return;
+    }
+    const terps = {};
+    for (const t of r.terpenes) terps[t.name] = String(t.value);
+    setForm({
+      strainName: r.strainName || "",
+      productType: r.productType || null,
+      thc:   r.thc   !== null ? String(r.thc)   : "",
+      cbd:   r.cbd   !== null ? String(r.cbd)   : "",
+      thcMg: r.thcMg !== null ? String(r.thcMg) : "",
+      cbdMg: r.cbdMg !== null ? String(r.cbdMg) : "",
+      terps,
+    });
+    setNote("Auto-filled from your paste — double-check the values below, then analyze.");
+    setError(null);
+  };
+
+  const num = (s) => {
+    const v = parseFloat(s);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
+
+  const handleAnalyze = () => {
+    const r = {
+      thc:num(form.thc), cbd:num(form.cbd), thcMg:num(form.thcMg), cbdMg:num(form.cbdMg),
+      ratio:null, terpenes:[], productType:form.productType, totalTerpenes:null,
+      strainName:form.strainName.trim() || null, servingSize:null, terpeneWarnings:[],
+    };
+    for (const [name, pct] of Object.entries(form.terps)) {
+      const v = num(pct);
+      const displayName = DISPLAY[name] || name.charAt(0).toUpperCase() + name.slice(1);
+      r.terpenes.push(v !== null
+        ? { name, value:v, displayName }
+        : { name, value:NO_PCT_WEIGHT, displayName, noPct:true });
+    }
+    if (r.thc===null && r.cbd===null && r.thcMg===null && r.cbdMg===null && r.terpenes.length===0) {
+      setError("Add at least a THC or CBD value, or select one terpene, to analyze.");
+      return;
+    }
+    setError(null);
+    onAnalyze(finalizeParsed(r));
+  };
+
+  // Chips: common list first, plus any pasted terpenes we don't list.
+  const extraTerps = Object.keys(form.terps).filter(n => !COMMON_TERPENES.includes(n));
+  const chipTerps = [...COMMON_TERPENES, ...extraTerps];
+  const selectedTerps = Object.keys(form.terps);
+
+  return (
+    <div style={{ animation:"ssReveal 0.3s ease-out", display:"flex", flexDirection:"column", gap:"14px" }}>
+
+      {/* ── Paste-first card ── */}
+      <div style={{ background:T.color.surface, borderRadius:T.radius.lg, padding:"18px", border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm, ...T.glass }}>
+        <FormLabel>Fastest way — paste the label</FormLabel>
+        <textarea
+          value={paste} onChange={e=>setPaste(e.target.value)} rows={3}
+          placeholder={"Paste anything with the numbers in it, e.g.\nBlue Dream  THC: 22.3%  Myrcene: 0.45%"}
+          style={{ ...FIELD_STYLE, fontFamily:T.font.mono, fontSize:"14px", lineHeight:1.6, resize:"vertical", marginBottom:"10px" }}
+        />
+        <Btn primary onClick={applyPaste} disabled={!paste.trim()} style={{ width:"100%" }}>Auto-Fill From Paste</Btn>
+        {note && (
+          <div style={{ marginTop:"10px", fontSize:"12.5px", color:T.color.green, fontFamily:T.font.body, lineHeight:1.5, display:"flex", gap:"6px", alignItems:"flex-start" }}>
+            <Icon name="info" size={14} color={T.color.green} style={{ flexShrink:0, marginTop:"1px" }} />
+            <span>{note}</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:"12px", margin:"2px 0" }}>
+        <div style={{ flex:1, height:"1px", background:T.color.borderLight }} />
+        <span style={{ fontSize:"11px", color:T.color.textFaint, fontFamily:T.font.mono, letterSpacing:"0.08em" }}>OR ENTER DETAILS</span>
+        <div style={{ flex:1, height:"1px", background:T.color.borderLight }} />
+      </div>
+
+      {/* ── Guided form ── */}
+      <div style={{ background:T.color.surface, borderRadius:T.radius.lg, padding:"18px", border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm, ...T.glass, display:"flex", flexDirection:"column", gap:"18px" }}>
+
+        <div>
+          <FormLabel>Strain / product name <span style={{opacity:0.6}}>(optional)</span></FormLabel>
+          <input
+            type="text" value={form.strainName} onChange={e=>setF("strainName", e.target.value)}
+            placeholder="e.g. Blue Dream" autoCapitalize="words" style={FIELD_STYLE}
+          />
+        </div>
+
+        <div>
+          <FormLabel>Product type</FormLabel>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+            {PRODUCT_TYPES.map(pt => {
+              const active = form.productType === pt.key;
+              return (
+                <button key={pt.key} onClick={()=>setF("productType", active ? null : pt.key)} style={{
+                  padding:"9px 14px", borderRadius:T.radius.pill,
+                  border:`1px solid ${active ? "rgba(164,204,134,0.55)" : T.color.borderLight}`,
+                  background: active ? T.color.greenLight : T.color.surfaceAlt,
+                  color: active ? T.color.green : T.color.textSec,
+                  fontSize:"13px", fontFamily:T.font.body, fontWeight: active ? 600 : 400,
+                  cursor:"pointer", transition:"all 0.15s",
+                }}>{pt.label}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <FormLabel>Potency {isEdibleTy ? "— mg per serving" : "— %"}</FormLabel>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+            {isEdibleTy ? (
+              <>
+                <div style={{ position:"relative" }}>
+                  <input type="text" inputMode="decimal" value={form.thcMg} onChange={e=>setF("thcMg", e.target.value)}
+                    placeholder="THC" aria-label="THC milligrams per serving" style={FIELD_STYLE} />
+                  <span style={{ position:"absolute", right:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"12px", color:T.color.textFaint, fontFamily:T.font.mono }}>mg</span>
+                </div>
+                <div style={{ position:"relative" }}>
+                  <input type="text" inputMode="decimal" value={form.cbdMg} onChange={e=>setF("cbdMg", e.target.value)}
+                    placeholder="CBD" aria-label="CBD milligrams per serving" style={FIELD_STYLE} />
+                  <span style={{ position:"absolute", right:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"12px", color:T.color.textFaint, fontFamily:T.font.mono }}>mg</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ position:"relative" }}>
+                  <input type="text" inputMode="decimal" value={form.thc} onChange={e=>setF("thc", e.target.value)}
+                    placeholder="THC" aria-label="THC percent" style={FIELD_STYLE} />
+                  <span style={{ position:"absolute", right:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"12px", color:T.color.textFaint, fontFamily:T.font.mono }}>%</span>
+                </div>
+                <div style={{ position:"relative" }}>
+                  <input type="text" inputMode="decimal" value={form.cbd} onChange={e=>setF("cbd", e.target.value)}
+                    placeholder="CBD" aria-label="CBD percent" style={FIELD_STYLE} />
+                  <span style={{ position:"absolute", right:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"12px", color:T.color.textFaint, fontFamily:T.font.mono }}>%</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <FormLabel>Terpenes — tap what's on the label</FormLabel>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+            {chipTerps.map(name => {
+              const active = name in form.terps;
+              const displayName = DISPLAY[name] || name.charAt(0).toUpperCase() + name.slice(1);
+              return (
+                <button key={name} onClick={()=>toggleTerp(name)} style={{
+                  padding:"9px 14px", borderRadius:T.radius.pill,
+                  border:`1px solid ${active ? "rgba(164,204,134,0.55)" : T.color.borderLight}`,
+                  background: active ? T.color.greenLight : T.color.surfaceAlt,
+                  color: active ? T.color.green : T.color.textSec,
+                  fontSize:"13px", fontFamily:T.font.body, fontWeight: active ? 600 : 400,
+                  cursor:"pointer", transition:"all 0.15s",
+                }}>{active ? "✓ " : ""}{displayName}</button>
+              );
+            })}
+          </div>
+
+          {selectedTerps.length > 0 && (
+            <div style={{ marginTop:"14px", display:"flex", flexDirection:"column", gap:"8px" }}>
+              {selectedTerps.map(name => {
+                const displayName = DISPLAY[name] || name.charAt(0).toUpperCase() + name.slice(1);
+                return (
+                  <div key={name} style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:"14px", fontWeight:600, color:T.color.text, fontFamily:T.font.body }}>{displayName}</div>
+                      {TERPENE_PLAIN[name] && <div style={{ fontSize:"11.5px", color:T.color.textMuted, fontFamily:T.font.body }}>{TERPENE_PLAIN[name]}</div>}
+                    </div>
+                    <div style={{ position:"relative", width:"120px" }}>
+                      <input
+                        type="text" inputMode="decimal" value={form.terps[name]}
+                        onChange={e=>setForm(f => ({ ...f, terps:{ ...f.terps, [name]: e.target.value } }))}
+                        placeholder="optional" aria-label={`${displayName} percent, optional`}
+                        style={{ ...FIELD_STYLE, padding:"10px 30px 10px 12px", fontSize:"14px" }}
+                      />
+                      <span style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", fontSize:"12px", color:T.color.textFaint, fontFamily:T.font.mono }}>%</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ fontSize:"11.5px", color:T.color.textFaint, fontFamily:T.font.body, lineHeight:1.5 }}>
+                Percentages are optional — if the package doesn't list them, we'll rank the terpenes evenly.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && <Alert variant="warn">{error}</Alert>}
+
+      <div style={{ display:"flex", gap:"8px" }}>
+        <Btn onClick={onBack}>← Back</Btn>
+        <Btn primary onClick={handleAnalyze} style={{ flex:1 }}>Analyze</Btn>
       </div>
     </div>
   );
@@ -913,20 +1181,26 @@ function HomeCard({ icon, title, desc, onClick }) {
     <div onClick={onClick} style={{
       background:T.color.surface, border:`1px solid ${T.color.borderLight}`, borderRadius:T.radius.lg,
       padding:"20px", cursor:"pointer", transition:"all 0.2s",
-      boxShadow: T.shadow.sm,
+      boxShadow: T.shadow.sm, ...T.glass,
     }}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor=T.color.greenMuted;e.currentTarget.style.background=T.color.greenLight;e.currentTarget.style.boxShadow=T.shadow.md;}}
+      onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(164,204,134,0.35)";e.currentTarget.style.background=T.color.white;e.currentTarget.style.boxShadow=T.shadow.hover;}}
       onMouseLeave={e=>{e.currentTarget.style.borderColor=T.color.borderLight;e.currentTarget.style.background=T.color.surface;e.currentTarget.style.boxShadow=T.shadow.sm;}}
+      onMouseDown={e=>e.currentTarget.style.transform="scale(0.98)"}
+      onMouseUp={e=>e.currentTarget.style.transform="scale(1)"}
+      onTouchStart={e=>e.currentTarget.style.opacity="0.8"}
+      onTouchEnd={e=>e.currentTarget.style.opacity="1"}
     >
       <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
-        <div style={{ width:"44px",height:"44px",borderRadius:T.radius.md,background:T.color.greenLight,
+        <div style={{ width:"46px",height:"46px",borderRadius:"15px",background:T.color.greenLight,
+          boxShadow:"inset 0 0 0 1px rgba(164,204,134,0.22)",
           display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
           <Icon name={icon} size={20} color={T.color.green} />
         </div>
-        <div>
-          <div style={{ fontFamily:T.font.display, fontSize:"17px", marginBottom:"2px", color:T.color.text }}>{title}</div>
+        <div style={{flex:1}}>
+          <div style={{ fontFamily:T.font.display, fontSize:"16.5px", fontWeight:650, letterSpacing:"-0.01em", marginBottom:"2px", color:T.color.text }}>{title}</div>
           <div style={{ fontSize:"13px", color:T.color.textMuted, fontFamily:T.font.body }}>{desc}</div>
         </div>
+        <div style={{ color:T.color.textFaint, fontSize:"18px" }}>›</div>
       </div>
     </div>
   );
@@ -960,7 +1234,7 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
   return (
     <div style={{
       background:T.color.surface, borderRadius:T.radius.lg, padding: compact?"20px":"28px",
-      border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm,
+      border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm, ...T.glass,
       borderTop: compact ? `1px solid ${T.color.borderLight}` : `3px solid ${heroMeta.c}`,
     }}>
       {/* Header */}
@@ -976,7 +1250,7 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
           )}
           {compact && <Icon name={heroMeta.icon} size={20} color={heroMeta.c} />}
           <div>
-            <h2 style={{ margin:0, fontSize: compact?"17px":"22px", fontFamily:T.font.display, color:T.color.text }}>
+            <h2 style={{ margin:0, fontSize: compact?"17px":"24px", fontFamily:T.font.display, fontWeight:750, letterSpacing:"-0.02em", color:T.color.text }}>
               {parsed.strainName || (cbdHero ? "CBD-Forward" : getOutcomeTitle(result))}
             </h2>
             {parsed.strainName && !compact && <div style={{ fontSize:"12px", color:T.color.textMuted, fontFamily:T.font.body, marginTop:"2px" }}>{heroMeta.label}</div>}
@@ -1024,7 +1298,7 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
             <span style={{ fontSize:"12px", fontWeight:600, fontFamily:T.font.body,
               color: result.matchStrength==="High" ? T.color.green
                    : result.matchStrength==="Moderate" ? T.color.am
-                   : result.matchStrength==="Low" ? "#C2610A"
+                   : result.matchStrength==="Low" ? "#e0a35c"
                    : T.color.textSec,
             }}>
               {result.matchStrength}
@@ -1042,7 +1316,7 @@ function ResultCard({ parsed, result, onSave, saved, onCompare, onCounter, compa
         {parsed.thcMg===null && parsed.thc!==null && <StatBox label="THC" value={parsed.thc} unit="%" type="thc" />}
         {parsed.cbdMg===null && parsed.cbd!==null && <StatBox label="CBD" value={parsed.cbd} unit="%" type="cbd" />}
         {result.cbdThcRatio!==null && !result.ratioProfile && <StatBox label="CBD:THC" value={result.cbdThcRatio} unit="" type="ratio" />}
-        {result.topTerps.map((t,i) => <StatBox key={i} label={t.displayName} value={t.value} unit="%" type="terpene" />)}
+        {result.topTerps.map((t,i) => <StatBox key={i} label={t.displayName} value={t.noPct ? "✓" : t.value} unit={t.noPct ? "" : "%"} type="terpene" />)}
       </div>
 
       {!compact && <div style={{ height:"1px", background:T.color.borderLight, margin:"0 0 4px 0" }} />}
@@ -1110,18 +1384,19 @@ function SavedRow({ entry, onDelete, onSelect, selected, onFeedback }) {
   const timingIconColor = cbdRow?T.color.cbd:entry.result.timing.includes("PM")?T.color.pm:entry.result.timing.includes("AM")?T.color.am:T.color.bal;
   return (
     <div onClick={onSelect} style={{
-      background:T.color.surface, borderRadius:T.radius.md,
+      background:T.color.surface, borderRadius:"18px",
       padding:"18px 20px",
-      border:`1.5px solid ${selected?T.color.green:T.color.borderLight}`,
+      border:`1.5px solid ${selected?"rgba(164,204,134,0.55)":T.color.borderLight}`,
       cursor: onSelect?"pointer":"default",
       transition:"all 0.15s",
-      boxShadow: selected?T.shadow.hover:"none",
+      boxShadow: selected?T.shadow.hover:T.shadow.sm,
+      ...T.glass,
     }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div style={{ flex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"6px" }}>
             <Icon name={timingIconName} size={16} color={timingIconColor} />
-            <span style={{ fontFamily:T.font.display, fontSize:"16px", color:T.color.text }}>
+            <span style={{ fontFamily:T.font.display, fontSize:"16px", fontWeight:650, letterSpacing:"-0.01em", color:T.color.text }}>
               {entry.parsed.strainName || "Unnamed Product"}
             </span>
           </div>
@@ -1133,7 +1408,7 @@ function SavedRow({ entry, onDelete, onSelect, selected, onFeedback }) {
           </div>
           {entry.result.topTerps.length>0 && (
             <div style={{ fontSize:"12px", color:T.color.textSec, fontFamily:T.font.mono, marginTop:"6px" }}>
-              {entry.result.topTerps.map(t => `${t.displayName} ${t.value}%`).join("  ·  ")}
+              {entry.result.topTerps.map(t => t.noPct ? t.displayName : `${t.displayName} ${t.value}%`).join("  ·  ")}
             </div>
           )}
         </div>
@@ -1174,7 +1449,7 @@ function QuickCompare({ entryA, saved, onPickB, onBack }) {
     <div style={{animation:"ssReveal 0.35s ease-out"}}>
       <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"20px" }}>
         <Btn onClick={onBack}>← Back</Btn>
-        <h2 style={{ margin:0, fontFamily:T.font.display, fontSize:"22px" }}>Quick Compare</h2>
+        <h2 style={{ margin:0, fontFamily:T.font.display, fontSize:"22px", fontWeight:750, letterSpacing:"-0.02em" }}>Quick Compare</h2>
       </div>
 
       {/* Product A — fixed */}
@@ -1239,7 +1514,6 @@ export default function StrainSense() {
   const [view, setView] = useState("home");
   const [sourceFocus, setSourceFocus] = useState(null);
   const [prevView, setPrevView] = useState("home");
-  const [textInput, setTextInput] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1291,7 +1565,7 @@ export default function StrainSense() {
   }, [saved, storageReady]);
 
   const reset = () => {
-    setView("home"); setTextInput(""); setImagePreview(null);
+    setView("home"); setImagePreview(null);
     setLoading(false); setError(null); setResult(null); setParsed(null);
     setJustSaved(false); setSelectedMood(null); setShowCounter(false);
     setDebugLog([]);
@@ -1301,13 +1575,8 @@ export default function StrainSense() {
     setSaved(prev => prev.map(e => e.id===id ? {...e, feedback} : e));
   };
 
-  const handleText = () => {
+  const handleFormAnalyze = (p) => {
     setError(null);
-    const p = parseInput(textInput);
-    if (p.terpenes.length===0 && p.thc===null && p.thcMg===null && p.cbd===null && p.cbdMg===null) {
-      setError("Couldn't find any product data. Try: THC: 10mg | CBD: 25mg or THC: 22% | Myrcene: 0.45%");
-      return;
-    }
     setParsed(p); setResult(classify(p, tolerance)); setView("result");
   };
 
@@ -1326,7 +1595,10 @@ export default function StrainSense() {
       }
 
       // ── STEP 2: proxy or direct ────────────────────────────────
-      const proxyBase = import.meta.env.VITE_API_URL;
+      // Native builds bake VITE_API_URL in at build time; the web app
+      // falls back to its own origin (the API routes live alongside it).
+      const proxyBase = import.meta.env.VITE_API_URL
+        || (!Capacitor.isNativePlatform() && typeof window !== "undefined" ? window.location.origin : null);
       addLog(`proxyBase=${proxyBase || "(none — direct)"}`);
 
       let extracted = "";
@@ -1505,27 +1777,43 @@ export default function StrainSense() {
   if (!ageVerified) return <AgeGate onConfirm={confirmAge} />;
 
   return (
-    <div style={{ minHeight:"100vh", background:`linear-gradient(180deg, ${T.color.bg} 0%, ${T.color.bgDeep} 100%)`, fontFamily:T.font.body, color:T.color.text }}>
+    <div style={{ minHeight:"100vh", background:T.color.bgDeep, fontFamily:T.font.body, color:T.color.text }}>
       <style>{`
-        @import url('${FONT_URL}');
         @keyframes ssReveal { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ssSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        html { color-scheme: dark; }
         textarea:focus, button:focus { outline:none; }
         textarea::placeholder { color:${T.color.textFaint}; }
+        ::selection { background: rgba(164,204,134,0.30); }
         * { box-sizing:border-box; }
         input[type="file"] { display:none; }
       `}</style>
 
-      <div style={{ maxWidth:"600px", margin:"0 auto", padding:"32px 20px 64px" }}>
+      {/* Fixed aurora atmosphere — glass surfaces frost this glow */}
+      <div aria-hidden="true" style={{
+        position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
+        background: `
+          radial-gradient(70% 42% at 80% -5%, rgba(94,148,74,0.28) 0%, transparent 60%),
+          radial-gradient(55% 36% at 8% 30%, rgba(196,164,58,0.10) 0%, transparent 65%),
+          radial-gradient(80% 50% at 50% 112%, rgba(52,92,60,0.30) 0%, transparent 62%),
+          linear-gradient(178deg, #0e120d 0%, #0a0c09 100%)`,
+      }} />
+      <div aria-hidden="true" style={{
+        position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
+        background: "radial-gradient(36% 22% at 60% 24%, rgba(140,190,110,0.13), transparent 70%)",
+        filter: "blur(10px)",
+      }} />
+
+      <div style={{ maxWidth:"600px", margin:"0 auto", padding:"32px 20px 64px", position:"relative", zIndex:1 }}>
 
         {/* ── HEADER ── */}
         <div onClick={()=>reset()} style={{ textAlign:"center", marginBottom:"32px", cursor:"pointer" }}>
           <div style={{ marginBottom:"6px" }}><Icon name="leaf" size={32} color={T.color.green} /></div>
           <h1 style={{
-            fontFamily:T.font.display, fontSize:"30px", fontWeight:400,
-            margin:"0 0 3px 0", letterSpacing:"-0.01em", color:T.color.text,
+            fontFamily:T.font.display, fontSize:"30px", fontWeight:750,
+            margin:"0 0 3px 0", letterSpacing:"-0.03em", color:T.color.text,
           }}>Strain Sense</h1>
-          <p style={{ fontSize:"13px", color:T.color.textMuted, margin:0, fontFamily:T.font.body, fontWeight:300 }}>
+          <p style={{ fontSize:"13px", color:T.color.textMuted, margin:0, fontFamily:T.font.body, fontWeight:400 }}>
             Make sense of your experience.
           </p>
         </div>
@@ -1537,7 +1825,7 @@ export default function StrainSense() {
             borderRadius:T.radius.lg, padding:"14px 40px 14px 16px",
             marginBottom:"20px", fontSize:"13px", color:T.color.textSec,
             lineHeight:1.6, position:"relative",
-            borderLeft:`3px solid ${T.color.greenMuted}`,
+            borderLeft:`3px solid ${T.color.greenMuted}`, ...T.glass,
           }}>
             <strong style={{ color:T.color.text }}>Educational use only.</strong>{" "}
             Strain Sense provides general information based on peer-reviewed terpene
@@ -1602,12 +1890,12 @@ export default function StrainSense() {
               desc="Photo of a label, menu, or terpene panel"
               onClick={()=>{ setView("image"); setTimeout(openImagePicker, 100); }} />
             <HomeCard icon="fileText" title="Enter Product Profile"
-              desc="Type or paste THC, terpenes, and percentages"
+              desc="Paste the label text or tap in the details"
               onClick={()=>setView("text")} />
             <HomeCard icon="compass" title="How Do You Want to Feel?"
               desc="Pick a mood — we'll tell you what to look for"
               onClick={()=>setView("mood")} />
-            <div style={{ background:T.color.surface, borderRadius:T.radius.lg, padding:"20px", border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm }}>
+            <div style={{ background:T.color.surface, borderRadius:T.radius.lg, padding:"20px", border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm, ...T.glass }}>
               <ToleranceSelector value={tolerance} onChange={setTolerance} />
             </div>
           </div>
@@ -1615,23 +1903,10 @@ export default function StrainSense() {
 
 
         {/* ════════════════════════════════════════════════ */}
-        {/* TEXT INPUT                                       */}
+        {/* PRODUCT ENTRY (paste-first guided form)          */}
         {/* ════════════════════════════════════════════════ */}
         {view==="text" && (
-          <div style={{animation:"ssReveal 0.3s ease-out"}}>
-            <textarea value={textInput} onChange={e=>setTextInput(e.target.value)}
-              placeholder={"Flower:\nStrain: Blue Dream\nTHC: 22.3%\nMyrcene: 0.45%\nLimonene: 0.07%\n\nEdible / Gummy:\nTHC: 10 mg\nCBD: 25 mg\nRatio: 2:1\n\nTincture:\nCBD: 30 mg\nTHC: 1 mg\nLinalool: 0.12%"}
-              rows={7} style={{
-                width:"100%", padding:"16px", borderRadius:T.radius.lg,
-                border:`1px solid ${T.color.border}`, background:T.color.surface,
-                fontSize:"14px", fontFamily:T.font.mono, lineHeight:1.6,
-                color:T.color.text, resize:"vertical",
-              }} />
-            <div style={{ display:"flex", gap:"8px", marginTop:"12px" }}>
-              <Btn onClick={reset}>← Back</Btn>
-              <Btn primary onClick={handleText} style={{flex:1}}>Translate</Btn>
-            </div>
-          </div>
+          <ProductForm onBack={reset} onAnalyze={handleFormAnalyze} />
         )}
 
 
@@ -1661,6 +1936,7 @@ export default function StrainSense() {
                 <div onClick={openImagePicker} style={{
                   border:`2px dashed ${T.color.border}`, borderRadius:T.radius.lg, padding:"44px 20px",
                   textAlign:"center", cursor:"pointer", background:T.color.surface, transition:"all 0.2s",
+                  ...T.glass,
                 }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=T.color.green;}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=T.color.border;}}
@@ -1696,7 +1972,7 @@ export default function StrainSense() {
         {/* ════════════════════════════════════════════════ */}
         {view==="mood" && (
           <div style={{animation:"ssReveal 0.3s ease-out"}}>
-            <h2 style={{ fontFamily:T.font.display, fontSize:"22px", margin:"0 0 4px 0" }}>How do you want to feel?</h2>
+            <h2 style={{ fontFamily:T.font.display, fontSize:"22px", fontWeight:750, letterSpacing:"-0.02em", margin:"0 0 4px 0" }}>How do you want to feel?</h2>
             <p style={{ fontSize:"13px", color:T.color.textMuted, margin:"0 0 18px 0" }}>Pick a mood and we'll tell you what terpenes to look for.</p>
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"16px" }}>
@@ -1705,15 +1981,15 @@ export default function StrainSense() {
                   background:T.color.surface, borderRadius:T.radius.lg, padding:"16px",
                   border:`1.5px solid ${T.color.borderLight}`,
                   cursor:"pointer", transition:"all 0.12s",
-                  boxShadow:T.shadow.sm,
+                  boxShadow:T.shadow.sm, ...T.glass,
                 }}
                 onMouseDown={e=>e.currentTarget.style.transform="scale(0.97)"}
                 onMouseUp={e=>e.currentTarget.style.transform="scale(1)"}
                 onTouchStart={e=>e.currentTarget.style.opacity="0.75"}
                 onTouchEnd={e=>e.currentTarget.style.opacity="1"}
                 >
-                  <div style={{marginBottom:"8px"}}><Icon name={m.icon} size={22} color={T.color.textMuted} /></div>
-                  <div style={{fontFamily:T.font.display,fontSize:"15px",color:T.color.text,marginBottom:"2px"}}>{m.label}</div>
+                  <div style={{marginBottom:"8px"}}><Icon name={m.icon} size={22} color={T.color.green} /></div>
+                  <div style={{fontFamily:T.font.display,fontSize:"15px",fontWeight:650,letterSpacing:"-0.01em",color:T.color.text,marginBottom:"2px"}}>{m.label}</div>
                   <div style={{fontSize:"12px",color:T.color.textMuted}}>{m.desc}</div>
                 </div>
               ))}
@@ -1736,12 +2012,12 @@ export default function StrainSense() {
             <div style={{animation:"ssReveal 0.35s ease-out"}}>
               <div style={{
                 background:T.color.surface, borderRadius:T.radius.lg, padding:"28px",
-                border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm,
+                border:`1px solid ${T.color.borderLight}`, boxShadow:T.shadow.sm, ...T.glass,
               }}>
                 <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"18px"}}>
                   <Icon name={mood.icon} size={28} color={T.color.green} />
                   <div>
-                    <h2 style={{margin:0,fontFamily:T.font.display,fontSize:"22px"}}>{mood.label}</h2>
+                    <h2 style={{margin:0,fontFamily:T.font.display,fontSize:"22px",fontWeight:750,letterSpacing:"-0.02em"}}>{mood.label}</h2>
                     <div style={{fontSize:"13px",color:T.color.textSec,marginTop:"2px"}}>{mood.desc}</div>
                   </div>
                 </div>
@@ -1757,7 +2033,7 @@ export default function StrainSense() {
                         background:T.color.greenLight, borderRadius:T.radius.lg, padding:"14px 16px",
                         flex:"1 1 auto", minWidth:"140px",
                       }}>
-                        <div style={{fontFamily:T.font.display,fontSize:"15px",color:T.color.green,marginBottom:"2px"}}>
+                        <div style={{fontFamily:T.font.display,fontSize:"15px",fontWeight:650,letterSpacing:"-0.01em",color:T.color.green,marginBottom:"2px"}}>
                           {display}<CitationMarks ids={cites} />
                         </div>
                         {note && <div style={{fontSize:"12px",color:T.color.textMuted,lineHeight:1.4}}>{note}</div>}
@@ -1772,7 +2048,7 @@ export default function StrainSense() {
                     {mood.timing}
                   </Pill>
                   <Pill>{mood.highType}</Pill>
-                  <Pill bg="#FFF3E0" color="#C2610A">THC: {mood.thcRange}</Pill>
+                  <Pill bg={T.color.amBg} color={T.color.am}>THC: {mood.thcRange}</Pill>
                 </div>
 
                 {mood.note && (
@@ -1877,7 +2153,7 @@ export default function StrainSense() {
         {/* ════════════════════════════════════════════════ */}
         {view==="saved" && (
           <div style={{animation:"ssReveal 0.35s ease-out"}}>
-            <h2 style={{ fontFamily:T.font.display, fontSize:"22px", margin:"0 0 16px 0" }}>Saved Products</h2>
+            <h2 style={{ fontFamily:T.font.display, fontSize:"22px", fontWeight:750, letterSpacing:"-0.02em", margin:"0 0 16px 0" }}>Saved Products</h2>
 
             {saved.length===0 ? (
               <div style={{textAlign:"center",padding:"40px 20px",color:T.color.textMuted}}>

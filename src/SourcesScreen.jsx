@@ -5,30 +5,34 @@ import { SOURCES, getActiveSources } from "./sources";
 // SOURCES SCREEN
 // Backs every health/terpene claim in the app per
 // App Store Review Guideline 1.4.1 (Safety / Physical Harm).
-// Visual language matches StrainSense.jsx — cream + green palette.
+// Visual language matches StrainSense.jsx — Obsidian Frost dark glass.
 // ═══════════════════════════════════════════════════════════
 
 const T = {
   color: {
-    bg:           "#f3f1ea",
-    surface:      "#faf9f5",
-    surfaceAlt:   "#f0ede4",
-    border:       "#dedad2",
-    borderLight:  "#eae6dc",
-    text:         "#2c2c24",
-    textSec:      "#5c5c50",
-    textMuted:    "#908e82",
-    green:        "#4d6b3d",
-    greenDeep:    "#3b5530",
-    greenLight:   "#e6efe0",
+    bg:           "rgba(255,255,255,0.04)",
+    surface:      "rgba(255,255,255,0.065)",
+    surfaceAlt:   "rgba(255,255,255,0.05)",
+    border:       "rgba(255,255,255,0.14)",
+    borderLight:  "rgba(255,255,255,0.09)",
+    text:         "#eef1e8",
+    textSec:      "#b9bfae",
+    textMuted:    "#7e8476",
+    green:        "#a4cc86",
+    greenDeep:    "#c0dfa8",
+    greenLight:   "rgba(164,204,134,0.12)",
   },
   font: {
-    display: "'DM Serif Display', Georgia, system-ui, serif",
-    body:    "'Libre Franklin', 'Helvetica Neue', system-ui, sans-serif",
-    mono:    "'IBM Plex Mono', system-ui, monospace",
+    display: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
+    body:    "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif",
+    mono:    "ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, monospace",
   },
-  radius: { md: "12px", lg: "16px", pill: "24px" },
-  shadow: { sm: "0 1px 4px rgba(44,44,36,0.06)" },
+  radius: { md: "14px", lg: "22px", pill: "999px" },
+  shadow: { sm: "0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10)" },
+  glass: {
+    backdropFilter: "blur(28px) saturate(1.4)",
+    WebkitBackdropFilter: "blur(28px) saturate(1.4)",
+  },
 };
 
 // Open external links via the OS default browser.
@@ -67,10 +71,11 @@ export default function SourcesScreen({ onBack, focusId }) {
         padding: "24px",
         border: `1px solid ${T.color.borderLight}`,
         boxShadow: T.shadow.sm,
+        ...T.glass,
       }}>
         <h2 style={{
-          fontFamily: T.font.display, fontSize: "24px", fontWeight: 400,
-          margin: "0 0 6px 0", color: T.color.text, letterSpacing: "-0.01em",
+          fontFamily: T.font.display, fontSize: "23px", fontWeight: 750,
+          margin: "0 0 6px 0", color: T.color.text, letterSpacing: "-0.02em",
         }}>
           Sources &amp; Citations
         </h2>
@@ -110,7 +115,7 @@ export default function SourcesScreen({ onBack, focusId }) {
                 </span>
                 <span style={{
                   fontFamily: T.font.display, fontSize: "15px",
-                  color: T.color.text, fontWeight: 400,
+                  color: T.color.text, fontWeight: 650, letterSpacing: "-0.01em",
                 }}>
                   {s.label}
                 </span>

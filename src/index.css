@@ -1,6 +1,6 @@
 /* ─── MOBILE / CAPACITOR RESET ─── */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; padding: 0; width: 100%; background: #f3f1ea; overscroll-behavior: none; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
+html, body { margin: 0; padding: 0; width: 100%; background: #0a0c09; overscroll-behavior: none; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
 #root { width: 100%; min-height: 100svh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 
 :root {
