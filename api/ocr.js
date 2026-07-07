@@ -16,44 +16,57 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing imageBase64" });
   }
 
-  const apiKey = process.env.OCR_SPACE_API_KEY || "helloworld";
   const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
   const byteSize = Math.round(cleanBase64.length * 0.75);
 
-  try {
+  // Try the configured key first, then fall back to the free public key.
+  // A stale/misconfigured key can return an empty-but-"successful" result,
+  // so an empty parse also triggers the fallback.
+  const keys = [];
+  if (process.env.OCR_SPACE_API_KEY) keys.push({ key: process.env.OCR_SPACE_API_KEY, label: "configured" });
+  keys.push({ key: "helloworld", label: "fallback" });
+
+  const runOcr = async (apikey, engine) => {
     const body = new URLSearchParams({
       base64Image: `data:image/jpeg;base64,${cleanBase64}`,
-      apikey: apiKey,
+      apikey,
       language: "eng",
       isTable: "false",
-      OCREngine: "2",
+      OCREngine: engine,
       scale: "true",
     });
-
     const resp = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
     });
-
     const data = await resp.json();
-    const text = data.ParsedResults?.[0]?.ParsedText || "";
-    const ocrError = data.ErrorMessage || data.ParsedResults?.[0]?.ErrorMessage || null;
+    return {
+      text: data.ParsedResults?.[0]?.ParsedText || "",
+      error: data.ErrorMessage || data.ParsedResults?.[0]?.ErrorMessage || null,
+    };
+  };
 
-    console.log("[ocr] provider=ocr.space | bytes=", byteSize, "| text length=", text.length, "| preview=", text.slice(0, 80));
+  try {
+    const attempts = [];
+    let text = "", lastError = null;
 
-    if (ocrError && !text) {
-      return res.status(200).json({
-        text: "",
-        provider: "ocr.space",
-        debug: { byteSize, textLength: 0, error: ocrError },
-      });
+    for (const { key, label } of keys) {
+      for (const engine of ["2", "1"]) {
+        const result = await runOcr(key, engine);
+        attempts.push(`${label}/engine${engine}:${result.text ? "ok" : (result.error ? "error" : "empty")}`);
+        if (result.error) lastError = result.error;
+        if (result.text.trim()) { text = result.text; break; }
+      }
+      if (text) break;
     }
+
+    console.log("[ocr] provider=ocr.space | bytes=", byteSize, "| text length=", text.length, "| attempts=", attempts.join(","));
 
     return res.status(200).json({
       text,
       provider: "ocr.space",
-      debug: { byteSize, textLength: text.length },
+      debug: { byteSize, textLength: text.length, attempts, ...(lastError && !text ? { error: lastError } : {}) },
     });
   } catch (err) {
     console.error("[ocr] error:", err?.message);
