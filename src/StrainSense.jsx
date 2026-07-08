@@ -1782,6 +1782,19 @@ export default function StrainSense() {
         @keyframes ssReveal { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ssSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         html { color-scheme: dark; }
+        /* Lock the document so iOS WKWebView can't rubber-band the whole page
+           diagonally; scrolling lives on #root where overscroll-behavior works. */
+        html, body { margin:0; height:100%; width:100%; background:#0a0c09; overflow:hidden; overscroll-behavior:none; }
+        #root {
+          position: fixed;
+          inset: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: none;
+          -webkit-overflow-scrolling: touch;
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
         textarea:focus, button:focus { outline:none; }
         textarea::placeholder { color:${T.color.textFaint}; }
         ::selection { background: rgba(164,204,134,0.30); }
@@ -1800,8 +1813,7 @@ export default function StrainSense() {
       }} />
       <div aria-hidden="true" style={{
         position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
-        background: "radial-gradient(36% 22% at 60% 24%, rgba(140,190,110,0.13), transparent 70%)",
-        filter: "blur(10px)",
+        background: "radial-gradient(42% 26% at 60% 24%, rgba(140,190,110,0.12) 0%, transparent 75%)",
       }} />
 
       <div style={{ maxWidth:"600px", margin:"0 auto", padding:"32px 20px 64px", position:"relative", zIndex:1 }}>
