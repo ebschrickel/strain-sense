@@ -1,5 +1,20 @@
 import UIKit
+import WebKit
 import Capacitor
+
+// The app's root view controller. Disables the WKWebView's rubber-band
+// overscroll so the fixed glass background can't drift and no white edge
+// shows when scrolling past the top or bottom. Referenced from Main.storyboard
+// (customClass="AppViewController", customModule="App"). Kept in this file so
+// it is part of the App target's build phase without editing the Xcode project.
+class AppViewController: CAPBridgeViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        webView?.scrollView.bounces = false
+        webView?.scrollView.alwaysBounceVertical = false
+        webView?.scrollView.alwaysBounceHorizontal = false
+    }
+}
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {

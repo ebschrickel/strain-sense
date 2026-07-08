@@ -1782,19 +1782,11 @@ export default function StrainSense() {
         @keyframes ssReveal { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ssSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         html { color-scheme: dark; }
-        /* Lock the document so iOS WKWebView can't rubber-band the whole page
-           diagonally; scrolling lives on #root where overscroll-behavior works. */
-        html, body { margin:0; height:100%; width:100%; background:#0a0c09; overflow:hidden; overscroll-behavior:none; }
-        #root {
-          position: fixed;
-          inset: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          overscroll-behavior: none;
-          -webkit-overflow-scrolling: touch;
-          padding-top: env(safe-area-inset-top);
-          padding-bottom: env(safe-area-inset-bottom);
-        }
+        /* Dark on every layer so no white edge can show, and no horizontal
+           drift. The WebView's rubber-band bounce itself is disabled natively
+           (iOS scrollView.bounces=false / Android overScrollMode=NEVER). */
+        html, body { margin:0; width:100%; min-height:100%; background:#0a0c09; overscroll-behavior:none; overflow-x:hidden; }
+        #root { min-height:100%; background:#0a0c09; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
         textarea:focus, button:focus { outline:none; }
         textarea::placeholder { color:${T.color.textFaint}; }
         ::selection { background: rgba(164,204,134,0.30); }
