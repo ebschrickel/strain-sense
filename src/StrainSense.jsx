@@ -1,6 +1,4 @@
-import { useState, useRef, useEffect } from "react";
-import { Capacitor } from "@capacitor/core";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { useState, useEffect } from "react";
 import SourcesScreen from "./SourcesScreen";
 
 // ═══════════════════════════════════════════════════════════
@@ -197,7 +195,10 @@ function CitationMarks({ ids }) {
   );
 }
 
-function parseInput(text) {
+// Kept (prefixed with `_` so the eslint unused-vars rule allows it) — the legacy
+// freeform-text / OCR parser. Manual entry is now the primary flow; this helper
+// will be revived when the scanner pipeline returns with proper validation.
+function _parseInput(text) {
   const r = { thc:null, cbd:null, thcMg:null, cbdMg:null, ratio:null, terpenes:[], productType:null, totalTerpenes:null, strainName:null, servingSize:null, terpeneWarnings:[] };
   const lines = text.replace(/\|/g,"\n").replace(/,(?=\s*[a-zA-Z])/g,"\n").split("\n");
   for (const line of lines) {
@@ -1230,18 +1231,325 @@ function QuickCompare({ entryA, saved, onPickB, onBack }) {
 }
 
 
+// ─── MANUAL ENTRY FORM ──────────────────────────────────────
+// Structured replacement for the previous freeform textarea + scanner flow.
+// Produces a `parsed` object (same shape parseInput returns) so classify() works
+// unchanged, plus a limitedDataNote when the user supplied minimal info.
+const PRODUCT_TYPES = [
+  { value: "flower",      label: "Flower" },
+  { value: "preroll",     label: "Pre-roll" },
+  { value: "vape",        label: "Vape" },
+  { value: "edible",      label: "Edible" },
+  { value: "concentrate", label: "Concentrate" },
+  { value: "other",       label: "Other" },
+];
+
+const COMMON_TERPENES = [
+  { name: "myrcene",       label: "Myrcene" },
+  { name: "limonene",      label: "Limonene" },
+  { name: "linalool",      label: "Linalool" },
+  { name: "pinene",        label: "Pinene" },
+  { name: "caryophyllene", label: "Caryophyllene" },
+  { name: "humulene",      label: "Humulene" },
+  { name: "terpinolene",   label: "Terpinolene" },
+  { name: "ocimene",       label: "Ocimene" },
+  { name: "nerolidol",     label: "Nerolidol" },
+  { name: "bisabolol",     label: "Bisabolol" },
+  { name: "guaiol",        label: "Guaiol" },
+];
+
+const INTENDED_EFFECTS = [
+  { id: "sleep",      label: "Sleep" },
+  { id: "anxiety",    label: "Anxiety relief" },
+  { id: "focus",      label: "Focus" },
+  { id: "creativity", label: "Creativity" },
+  { id: "social",     label: "Social" },
+  { id: "pain",       label: "Pain / body relief" },
+  { id: "euphoria",   label: "Euphoria" },
+];
+
+// Accepts decimals and percent-style input ("22.3", "22.3%", " 22 % ").
+// Returns null when blank or unparseable, a non-negative number otherwise.
+function parsePercentField(s) {
+  if (s === null || s === undefined) return null;
+  const cleaned = String(s).replace(/%/g, "").trim();
+  if (!cleaned) return null;
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+  const v = parseFloat(cleaned);
+  return Number.isFinite(v) && v >= 0 ? v : null;
+}
+
+// Reject non-numeric keystrokes early so the field only ever holds a valid value.
+function sanitizePercentInput(s) {
+  if (!s) return "";
+  // Allow digits, one dot, and a trailing %
+  let out = String(s).replace(/[^0-9.%]/g, "");
+  // Collapse multiple dots
+  const firstDot = out.indexOf(".");
+  if (firstDot !== -1) {
+    out = out.slice(0, firstDot + 1) + out.slice(firstDot + 1).replace(/\./g, "");
+  }
+  // Only keep a single trailing %
+  out = out.replace(/%/g, "");
+  return out;
+}
+
+function ManualEntryForm({ onSubmit, onCancel }) {
+  const [strainName, setStrainName] = useState("");
+  const [productType, setProductType] = useState("flower");
+  const [thc, setThc] = useState("");
+  const [thca, setThca] = useState("");
+  const [cbd, setCbd] = useState("");
+  const [cbg, setCbg] = useState("");
+  const [terpenes, setTerpenes] = useState([]);
+  const [terpeneOther, setTerpeneOther] = useState("");
+  const [effects, setEffects] = useState([]);
+  const [nameError, setNameError] = useState("");
+
+  const toggleTerpene = (n) =>
+    setTerpenes(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]);
+  const toggleEffect = (id) =>
+    setEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const handleSubmit = () => {
+    const name = strainName.trim();
+    if (!name) {
+      setNameError("Required — copy the strain or product name from the dispensary label.");
+      return;
+    }
+    setNameError("");
+    onSubmit({
+      strainName: name,
+      productType,
+      thc:  parsePercentField(thc),
+      thca: parsePercentField(thca),
+      cbd:  parsePercentField(cbd),
+      cbg:  parsePercentField(cbg),
+      terpenes,
+      terpeneOther: terpeneOther.trim(),
+      effects,
+    });
+  };
+
+  const labelStyle = {
+    fontSize: "11px", color: T.color.textMuted, letterSpacing: "0.08em",
+    fontFamily: T.font.mono, textTransform: "uppercase", marginBottom: "6px",
+  };
+  const fieldHint = {
+    fontSize: "11px", color: T.color.textFaint, fontFamily: T.font.body,
+    marginTop: "4px", lineHeight: 1.5,
+  };
+  const inputStyle = {
+    width: "100%", padding: "12px 14px", borderRadius: T.radius.md,
+    border: `1px solid ${T.color.border}`, background: T.color.surface,
+    fontSize: "14px", fontFamily: T.font.body, color: T.color.text,
+  };
+
+  return (
+    <div style={{ animation: "ssReveal 0.3s ease-out" }}>
+      <div style={{
+        background: T.color.surface, border: `1px solid ${T.color.borderLight}`,
+        borderRadius: T.radius.lg, padding: "20px", boxShadow: T.shadow.sm,
+      }}>
+        <h2 style={{ margin: "0 0 4px 0", fontFamily: T.font.display, fontSize: "20px", color: T.color.text }}>
+          Enter product details
+        </h2>
+        <p style={{ margin: "0 0 18px 0", fontSize: "13px", color: T.color.textMuted, fontFamily: T.font.body, lineHeight: 1.5 }}>
+          Copy what you see on the dispensary label. The more you fill in, the more accurate the interpretation.
+        </p>
+
+        {/* Product type */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={labelStyle}>Product type</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {PRODUCT_TYPES.map(pt => {
+              const active = productType === pt.value;
+              return (
+                <button key={pt.value} type="button" onClick={() => setProductType(pt.value)} style={{
+                  padding: "8px 14px", borderRadius: T.radius.pill,
+                  border: `1px solid ${active ? T.color.greenMuted : T.color.borderLight}`,
+                  background: active ? T.color.greenLight : T.color.surfaceAlt,
+                  color: active ? T.color.green : T.color.textMuted,
+                  fontSize: "12px", fontFamily: T.font.mono, fontWeight: active ? 600 : 500,
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{pt.label}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Strain / product name */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={labelStyle}>
+            Strain / product name <span style={{ color: T.color.warn, textTransform: "none", letterSpacing: 0 }}>*</span>
+          </div>
+          <input
+            type="text"
+            value={strainName}
+            onChange={(e) => { setStrainName(e.target.value); if (nameError) setNameError(""); }}
+            placeholder="e.g. Blue Dream, Wedding Cake 10mg gummy"
+            style={{
+              ...inputStyle,
+              borderColor: nameError ? T.color.warn : T.color.border,
+            }}
+          />
+          {nameError ? (
+            <div style={{ ...fieldHint, color: T.color.warnText }}>{nameError}</div>
+          ) : (
+            <div style={fieldHint}>Required. Use the exact name printed on the label.</div>
+          )}
+        </div>
+
+        {/* Cannabinoids */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={labelStyle}>Cannabinoids (% of total)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {[
+              { key: "thc",  label: "THC %",  value: thc,  set: setThc,  hint: "From the dispensary label. Optional but recommended." },
+              { key: "thca", label: "THCA %", value: thca, set: setThca, hint: "Often shown on flower COAs." },
+              { key: "cbd",  label: "CBD %",  value: cbd,  set: setCbd,  hint: "" },
+              { key: "cbg",  label: "CBG / CBGA %", value: cbg, set: setCbg, hint: "" },
+            ].map(f => (
+              <div key={f.key}>
+                <div style={{ ...labelStyle, marginBottom: "4px" }}>{f.label}</div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={f.value}
+                  onChange={(e) => f.set(sanitizePercentInput(e.target.value))}
+                  placeholder="e.g. 22.3"
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={fieldHint}>
+            Decimals are fine (e.g. <code>22.3</code> or <code>22.3%</code>). Leave blank if the label doesn&apos;t list it.
+          </div>
+        </div>
+
+        {/* Dominant terpenes */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={labelStyle}>Dominant terpenes (optional)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {COMMON_TERPENES.map(t => {
+              const active = terpenes.includes(t.name);
+              return (
+                <button key={t.name} type="button" onClick={() => toggleTerpene(t.name)} style={{
+                  padding: "8px 14px", borderRadius: T.radius.pill,
+                  border: `1px solid ${active ? T.color.greenMuted : T.color.borderLight}`,
+                  background: active ? T.color.greenLight : T.color.surfaceAlt,
+                  color: active ? T.color.green : T.color.textMuted,
+                  fontSize: "12px", fontFamily: T.font.mono, fontWeight: active ? 600 : 500,
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{active ? "✓ " : ""}{t.label}</button>
+              );
+            })}
+          </div>
+          <input
+            type="text"
+            value={terpeneOther}
+            onChange={(e) => setTerpeneOther(e.target.value)}
+            placeholder="Other terpenes from the label (free text, optional)"
+            style={{ ...inputStyle, marginTop: "10px" }}
+          />
+          <div style={fieldHint}>
+            Pick the 2–3 listed as dominant on the COA or terpene panel. Skip if not listed.
+          </div>
+        </div>
+
+        {/* Intended use / effect */}
+        <div style={{ marginBottom: "20px" }}>
+          <div style={labelStyle}>Intended use / effect (optional)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {INTENDED_EFFECTS.map(eff => {
+              const active = effects.includes(eff.id);
+              return (
+                <button key={eff.id} type="button" onClick={() => toggleEffect(eff.id)} style={{
+                  padding: "8px 14px", borderRadius: T.radius.pill,
+                  border: `1px solid ${active ? T.color.greenMuted : T.color.borderLight}`,
+                  background: active ? T.color.greenLight : T.color.surfaceAlt,
+                  color: active ? T.color.green : T.color.textMuted,
+                  fontSize: "12px", fontFamily: T.font.mono, fontWeight: active ? 600 : 500,
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{active ? "✓ " : ""}{eff.label}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Btn onClick={onCancel}>← Back</Btn>
+          <Btn primary onClick={handleSubmit} style={{ flex: 1 }}>Interpret</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Convert ManualEntryForm output → the `parsed` shape classify() expects.
+// Checked terpenes get a uniform default weight so the spectrum scoring still
+// runs; thca / cbg / intended effects are stored alongside for display only.
+function buildParsedFromForm(form) {
+  const TERP_DEFAULT_VALUE = 0.5;
+  const terpenes = (form.terpenes || []).map(name => ({
+    name,
+    value: TERP_DEFAULT_VALUE,
+    displayName: DISPLAY[name] || name,
+  }));
+  return {
+    thc:           form.thc  ?? null,
+    cbd:           form.cbd  ?? null,
+    thca:          form.thca ?? null,
+    cbg:           form.cbg  ?? null,
+    thcMg:         null,
+    cbdMg:         null,
+    ratio:         null,
+    terpenes,
+    productType:   form.productType,
+    totalTerpenes: null,
+    strainName:    form.strainName,
+    servingSize:   null,
+    terpeneWarnings: [],
+    intendedEffects: form.effects || [],
+    terpeneOther:    form.terpeneOther || "",
+    entryMode:       "manual",
+  };
+}
+
+// Build a "limited info" advisory when the user supplied minimal signal.
+function buildLimitedDataNote(parsed) {
+  const hasTerpenes  = parsed.terpenes && parsed.terpenes.length >= 2;
+  const hasOneTerp   = parsed.terpenes && parsed.terpenes.length === 1;
+  const hasPotency   = parsed.thc !== null || parsed.thca !== null;
+  const hasCbd       = parsed.cbd !== null || parsed.cbg !== null;
+
+  if (!hasTerpenes && !hasOneTerp && !hasPotency && !hasCbd) {
+    return "Interpretation is based on very limited information — primarily the strain / product name. For a more accurate effect profile, add THC % and the 2–3 dominant terpenes from the dispensary label or COA.";
+  }
+  if (!hasTerpenes && !hasPotency) {
+    return "Interpretation is based on limited information — primarily the strain / product name. Add THC % and dominant terpenes for a more accurate read.";
+  }
+  if (!hasTerpenes) {
+    return "Interpretation is based on limited information — primarily strain / product name and potency. Effect profile is approximate without dominant terpenes.";
+  }
+  if (!hasPotency) {
+    return "Interpretation is based on the terpene profile only — add THC % for potency context.";
+  }
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════
 
 export default function StrainSense() {
-  // Views: home | text | image | result | saved | compare | mood | moodResult | sources
+  // Views: home | text | result | saved | compare | mood | moodResult | sources
+  // (the previous "image" / scanner flow has been removed — manual entry is now
+  // the primary path.)
   const [view, setView] = useState("home");
   const [sourceFocus, setSourceFocus] = useState(null);
   const [prevView, setPrevView] = useState("home");
-  const [textInput, setTextInput] = useState("");
-  const [imagePreview, setImagePreview] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [parsed, setParsed] = useState(null);
@@ -1253,9 +1561,8 @@ export default function StrainSense() {
   const [showCounter, setShowCounter] = useState(false);
   const [ageVerified, setAgeVerified] = useState(() => !!localStorage.getItem(AGE_GATE_KEY));
   const [disclaimerSeen, setDisclaimerSeen] = useState(() => !!localStorage.getItem(DISCLAIMER_KEY));
+  // scanNote is reused as a "limited information" advisory shown above the result.
   const [scanNote, setScanNote] = useState(null);
-  const [debugLog, setDebugLog] = useState([]);
-  const fileRef = useRef();
 
   const confirmAge = () => {
     localStorage.setItem(AGE_GATE_KEY, "1");
@@ -1291,203 +1598,29 @@ export default function StrainSense() {
   }, [saved, storageReady]);
 
   const reset = () => {
-    setView("home"); setTextInput(""); setImagePreview(null);
-    setLoading(false); setError(null); setResult(null); setParsed(null);
+    setView("home");
+    setError(null); setResult(null); setParsed(null);
     setJustSaved(false); setSelectedMood(null); setShowCounter(false);
-    setDebugLog([]);
+    setScanNote(null);
   };
 
   const updateFeedback = (id, feedback) => {
     setSaved(prev => prev.map(e => e.id===id ? {...e, feedback} : e));
   };
 
-  const handleText = () => {
+  // Submission handler for the structured manual-entry form.
+  // Validates, classifies, and surfaces a limited-data advisory when needed.
+  const handleManualSubmit = (form) => {
     setError(null);
-    const p = parseInput(textInput);
-    if (p.terpenes.length===0 && p.thc===null && p.thcMg===null && p.cbd===null && p.cbdMg===null) {
-      setError("Couldn't find any product data. Try: THC: 10mg | CBD: 25mg or THC: 22% | Myrcene: 0.45%");
+    if (!form.strainName || !form.strainName.trim()) {
+      setError("Please enter the strain or product name from the label before continuing.");
       return;
     }
-    setParsed(p); setResult(classify(p, tolerance)); setView("result");
-  };
-
-  // Core image analysis — shared by both native Camera and web file input paths
-  const analyzeImageBase64 = async (b64, mt) => {
-    setError(null); setScanNote(null); setDebugLog([]); setLoading(true);
-    const log = [];
-    const addLog = (msg) => { log.push(msg); console.log("[scan]", msg); };
-
-    try {
-      // ── STEP 1: validate b64 ───────────────────────────────────
-      addLog(`b64: type=${typeof b64}, length=${b64?.length ?? "N/A"}, mt=${mt}`);
-      if (!b64 || typeof b64 !== "string") {
-        setError("Image conversion failed before OCR — b64 is not a valid string.");
-        setDebugLog(log); setLoading(false); return;
-      }
-
-      // ── STEP 2: proxy or direct ────────────────────────────────
-      const proxyBase = import.meta.env.VITE_API_URL;
-      addLog(`proxyBase=${proxyBase || "(none — direct)"}`);
-
-      let extracted = "";
-      let respStatus = null;
-
-      if (proxyBase) {
-        addLog(`Sending to /api/ocr, b64 size=${b64.length} chars (~${Math.round(b64.length * 0.75 / 1024)} KB)`);
-
-        // ── STEP 3: fetch ──────────────────────────────────────
-        const resp = await fetch(`${proxyBase}/api/ocr`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: b64 }),
-        });
-        respStatus = resp.status;
-        addLog(`Response status=${respStatus}`);
-
-        // ── STEP 4: read body as text first ───────────────────
-        const rawBody = await resp.text();
-        addLog(`Raw body (first 300): ${rawBody.slice(0, 300)}`);
-
-        // ── STEP 5: parse JSON safely ─────────────────────────
-        let data = null;
-        try {
-          data = JSON.parse(rawBody);
-          addLog(`provider=${data.provider}, keys: ${Object.keys(data).join(", ")}`);
-          if (data.debug) addLog(`debug: bytes=${data.debug.byteSize}, textLen=${data.debug.textLength}`);
-        } catch (jsonErr) {
-          addLog(`JSON parse FAILED: ${jsonErr.message}`);
-          setError(
-            `Image uploaded, but server returned a non-JSON response (status ${respStatus}).\n\nRaw: ${rawBody.slice(0, 200)}`
-          );
-          setDebugLog(log); setLoading(false); return;
-        }
-
-        // ── STEP 6: extract text ───────────────────────────────
-        addLog(`rawExtracted: "${String(data.text ?? "NULL").slice(0, 200)}"`);
-
-        if (data.error && !data.text) {
-          setError(`OCR error (status ${respStatus}): ${data.error}`);
-          setDebugLog(log); setLoading(false); return;
-        }
-
-        extracted = typeof data.text === "string" ? data.text : "";
-      } else {
-        addLog("No proxyBase — cannot run OCR without server");
-        setError("OCR requires a server connection. Please use the deployed app.");
-        setDebugLog(log); setLoading(false); return;
-      }
-
-      setDebugLog(log);
-
-      // ── STEP 7: empty text check ───────────────────────────────
-      if (!extracted.trim() || extracted.trim().length < 5) {
-        setError(`OCR returned no readable text (status: ${respStatus}). Image may be too blurry, dark, or in an unsupported format.`);
-        setLoading(false); return;
-      }
-
-      // ── STEP 8: parse ──────────────────────────────────────────
-      const p = parseInput(extracted);
-      addLog(`Parsed: thc=${p.thc}, thcMg=${p.thcMg}, cbd=${p.cbd}, terps=${p.terpenes.length}`);
-      console.log("[scan] parsed:", p);
-
-      if (p.terpenes.length === 0 && p.thc === null && p.thcMg === null && p.cbd === null && p.cbdMg === null) {
-        setError(
-          `OCR returned text, but parsing found no cannabis values.\n\n` +
-          `Extracted text:\n"${extracted.slice(0, 300)}"`
-        );
-        setLoading(false); return;
-      }
-
-      const hasTerps = p.terpenes.length >= 2;
-      const hasThc = p.thc !== null || p.thcMg !== null;
-      setScanNote(
-        !hasTerps && !hasThc ? "Partial data extracted — best-fit estimate from limited signal." :
-        (!hasTerps || !hasThc) ? "Likely profile based on partial label text." :
-        null
-      );
-
-      setParsed(p); setResult(classify(p, tolerance)); setView("result");
-    } catch (err) {
-      log.push(`CATCH: ${err?.name}: ${err?.message}`);
-      setDebugLog(log);
-      console.error("[scan] error:", err);
-      setError(`Error: ${err?.name ? `[${err.name}] ` : ""}${err?.message || "Image analysis failed. Try pasting values manually."}`);
-    }
-    setLoading(false);
-  };
-
-  // Native path — Capacitor Camera plugin (iOS + Android)
-  const handleImageNative = async () => {
-    try {
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Photos,
-      });
-      const dataUrl = image.dataUrl;
-      if (!dataUrl) { setError("Couldn't load image. Try again."); return; }
-      const mt = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
-      const b64 = dataUrl.split(",")[1];
-      setImagePreview(dataUrl);
-      setView("image");
-      await analyzeImageBase64(b64, mt);
-    } catch (e) {
-      // User cancelled — not an error
-      if (e?.message && !e.message.includes("cancel") && !e.message.includes("No image")) {
-        setError("Couldn't open photos. Please try again.");
-      }
-    }
-  };
-
-  // Web fallback — uses createObjectURL + canvas to handle HEIC on iOS Safari
-  // Resizes to max 1200px and compresses to target ~500 KB before sending
-  const handleImage = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setView("image");
-    setLoading(true);
-    setError(null);
-    try {
-      const objectUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = async () => {
-        URL.revokeObjectURL(objectUrl);
-        const MAX_SIDE = 1200;
-        let w = img.naturalWidth || img.width;
-        let h = img.naturalHeight || img.height;
-        if (w > MAX_SIDE || h > MAX_SIDE) {
-          if (w >= h) { h = Math.round(h * MAX_SIDE / w); w = MAX_SIDE; }
-          else { w = Math.round(w * MAX_SIDE / h); h = MAX_SIDE; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.70);
-        setImagePreview(dataUrl);
-        const b64 = dataUrl.split(",")[1];
-        await analyzeImageBase64(b64, "image/jpeg");
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        setError("Couldn't load this image. Try a different photo.");
-        setLoading(false);
-      };
-      img.src = objectUrl;
-    } catch(err) {
-      setError("Error loading image: " + (err?.message || "unknown"));
-      setLoading(false);
-    }
-  };
-
-  const openImagePicker = () => {
-    if (Capacitor.isNativePlatform()) {
-      handleImageNative();
-    } else {
-      fileRef.current?.click();
-    }
+    const p = buildParsedFromForm(form);
+    setScanNote(buildLimitedDataNote(p));
+    setParsed(p);
+    setResult(classify(p, tolerance));
+    setView("result");
   };
 
   const saveProduct = () => {
@@ -1500,7 +1633,7 @@ export default function StrainSense() {
     setSaved(prev=>prev.filter(e=>e.id!==id));
   };
 
-  const isHomeish = ["home","text","image","result","compare","mood","moodResult"].includes(view);
+  const isHomeish = ["home","text","result","compare","mood","moodResult"].includes(view);
 
   if (!ageVerified) return <AgeGate onConfirm={confirmAge} />;
 
@@ -1572,7 +1705,7 @@ export default function StrainSense() {
         {saved.length>0 && (
           <div style={{ display:"flex", justifyContent:"center", gap:"8px", marginBottom:"24px" }}>
             {[
-              {key:"home",label:"Analyze",match:["home","text","image","result","compare","mood","moodResult"]},
+              {key:"home",label:"Analyze",match:["home","text","result","compare","mood","moodResult"]},
               {key:"saved",label:`Saved (${saved.length})`},
             ].map(tab => {
               const active = tab.match ? tab.match.includes(view) : view===tab.key;
@@ -1598,11 +1731,10 @@ export default function StrainSense() {
         {/* ════════════════════════════════════════════════ */}
         {view==="home" && (
           <div style={{ display:"flex", flexDirection:"column", gap:"12px", animation:"ssReveal 0.35s ease-out" }}>
-            <HomeCard icon="camera" title="Scan Product"
-              desc="Photo of a label, menu, or terpene panel"
-              onClick={()=>{ setView("image"); setTimeout(openImagePicker, 100); }} />
-            <HomeCard icon="fileText" title="Enter Product Profile"
-              desc="Type or paste THC, terpenes, and percentages"
+            {/* Manual entry is now the primary flow. The previous photo/scanner
+                entry point has been disabled while the OCR pipeline is rebuilt. */}
+            <HomeCard icon="fileText" title="Enter Product Details"
+              desc="Type the strain name, THC %, terpenes, and how you want to feel"
               onClick={()=>setView("text")} />
             <HomeCard icon="compass" title="How Do You Want to Feel?"
               desc="Pick a mood — we'll tell you what to look for"
@@ -1618,77 +1750,12 @@ export default function StrainSense() {
         {/* TEXT INPUT                                       */}
         {/* ════════════════════════════════════════════════ */}
         {view==="text" && (
-          <div style={{animation:"ssReveal 0.3s ease-out"}}>
-            <textarea value={textInput} onChange={e=>setTextInput(e.target.value)}
-              placeholder={"Flower:\nStrain: Blue Dream\nTHC: 22.3%\nMyrcene: 0.45%\nLimonene: 0.07%\n\nEdible / Gummy:\nTHC: 10 mg\nCBD: 25 mg\nRatio: 2:1\n\nTincture:\nCBD: 30 mg\nTHC: 1 mg\nLinalool: 0.12%"}
-              rows={7} style={{
-                width:"100%", padding:"16px", borderRadius:T.radius.lg,
-                border:`1px solid ${T.color.border}`, background:T.color.surface,
-                fontSize:"14px", fontFamily:T.font.mono, lineHeight:1.6,
-                color:T.color.text, resize:"vertical",
-              }} />
-            <div style={{ display:"flex", gap:"8px", marginTop:"12px" }}>
-              <Btn onClick={reset}>← Back</Btn>
-              <Btn primary onClick={handleText} style={{flex:1}}>Translate</Btn>
-            </div>
-          </div>
+          <ManualEntryForm
+            onSubmit={handleManualSubmit}
+            onCancel={reset}
+          />
         )}
 
-
-        {/* ════════════════════════════════════════════════ */}
-        {/* IMAGE INPUT (EXPANDED)                          */}
-        {/* ════════════════════════════════════════════════ */}
-        {view==="image" && !result && (
-          <div style={{animation:"ssReveal 0.3s ease-out"}}>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} />
-
-            {imagePreview && (
-              <div style={{borderRadius:T.radius.lg, overflow:"hidden", marginBottom:"14px", border:`1px solid ${T.color.border}`}}>
-                <img src={imagePreview} alt="Label" style={{width:"100%",display:"block"}} />
-              </div>
-            )}
-
-            {loading && (
-              <div style={{textAlign:"center",padding:"36px",color:T.color.textMuted}}>
-                <div style={{marginBottom:"10px",animation:"ssSpin 1.2s linear infinite"}}><Icon name="leaf" size={28} color={T.color.greenMuted} /></div>
-                <div style={{fontFamily:T.font.mono,fontSize:"13px"}}>Analyzing image...</div>
-                <div style={{fontFamily:T.font.body,fontSize:"12px",color:T.color.textFaint,marginTop:"6px"}}>Reading THC, CBD, terpenes, ratios, and dosing info</div>
-              </div>
-            )}
-
-            {!loading && !imagePreview && (
-              <>
-                <div onClick={openImagePicker} style={{
-                  border:`2px dashed ${T.color.border}`, borderRadius:T.radius.lg, padding:"44px 20px",
-                  textAlign:"center", cursor:"pointer", background:T.color.surface, transition:"all 0.2s",
-                }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.color.green;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=T.color.border;}}
-                >
-                  <div style={{marginBottom:"10px"}}><Icon name="camera" size={36} color={T.color.greenMuted} /></div>
-                  <div style={{fontSize:"14px",color:T.color.textSec,fontWeight:500,marginBottom:"4px"}}>Tap to upload a photo</div>
-                  <div style={{fontSize:"12px",color:T.color.textMuted}}>Flower jars · Gummy packages · Tincture bottles · Menu screenshots</div>
-                </div>
-
-                {/* Tip card */}
-                <div style={{
-                  background:T.color.surfaceAlt, borderRadius:T.radius.md, padding:"14px 16px", marginTop:"12px",
-                  fontSize:"12px", color:T.color.textMuted, lineHeight:1.5, fontFamily:T.font.body,
-                }}>
-                  <strong style={{color:T.color.textSec}}>Tips for best results:</strong>
-                  <div style={{marginTop:"4px"}}>
-                    Works with flower jars, vape carts, gummy/edible packaging, tincture bottles, capsule labels, COA sheets, and dispensary menu screenshots. Make sure THC/CBD values, mg dosing, and terpene info are readable.
-                  </div>
-                </div>
-              </>
-            )}
-
-<div style={{display:"flex",gap:"8px",marginTop:"12px"}}>
-              <Btn onClick={reset}>← Back</Btn>
-              {imagePreview && !loading && <Btn onClick={openImagePicker} style={{flex:1}}>Try different photo</Btn>}
-            </div>
-          </div>
-        )}
 
 
         {/* ════════════════════════════════════════════════ */}
