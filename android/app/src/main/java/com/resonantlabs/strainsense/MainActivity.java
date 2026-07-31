@@ -1,4 +1,4 @@
-package com.openpaw.strainsense;
+package com.resonantlabs.strainsense;
 
 import android.os.Bundle;
 import android.view.View;
