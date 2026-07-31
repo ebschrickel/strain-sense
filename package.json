@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:web": "SS_WEB_BEACON=1 vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

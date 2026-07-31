@@ -8,10 +8,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0a0c09" />
     <title>Strain Sense</title>
-      <!-- first-party pageview beacon -->
+    <!-- BEACON:START — first-party pageview beacon, WEBSITE ONLY.
+         Stripped from the bundle entirely unless built with `npm run build:web`
+         (see vite.config.js), so `npm run build` + `cap sync` can never carry it
+         into the native apps. The runtime hostname guard below is a second layer:
+         inside Capacitor the origin is localhost (https:// on Android,
+         capacitor:// on iOS). Shipping this in an app would collect a persistent
+         id and contradict the "no data collected" store declarations. -->
     <script>
-      (function(){try{var K='scc_vid',v=localStorage.getItem(K);if(!v){v=(self.crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));localStorage.setItem(K,v);}fetch('https://zcdjhpandikkyilzovly.supabase.co/rest/v1/site_hits',{method:'POST',keepalive:true,headers:{apikey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGpocGFuZGlra3lpbHpvdmx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzg1NjAsImV4cCI6MjA4OTcxNDU2MH0.vx0IZIVHbSKABucxWM2_mPXFBVOIVODRs_YVRiC2eVg',Authorization:'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGpocGFuZGlra3lpbHpvdmx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzg1NjAsImV4cCI6MjA4OTcxNDU2MH0.vx0IZIVHbSKABucxWM2_mPXFBVOIVODRs_YVRiC2eVg','Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({site:location.hostname,path:location.pathname.slice(0,512),referrer:(document.referrer||'').slice(0,1024),visitor:v})}).catch(function(){});}catch(e){}})();
+      (function(){try{var h=location.hostname;if(!h||h==='localhost'||h==='127.0.0.1'||h==='[::1]'||location.protocol==='capacitor:'||location.protocol==='file:'||window.Capacitor){return;}var K='scc_vid',v=localStorage.getItem(K);if(!v){v=(self.crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));localStorage.setItem(K,v);}fetch('https://zcdjhpandikkyilzovly.supabase.co/rest/v1/site_hits',{method:'POST',keepalive:true,headers:{apikey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGpocGFuZGlra3lpbHpvdmx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzg1NjAsImV4cCI6MjA4OTcxNDU2MH0.vx0IZIVHbSKABucxWM2_mPXFBVOIVODRs_YVRiC2eVg',Authorization:'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGpocGFuZGlra3lpbHpvdmx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzg1NjAsImV4cCI6MjA4OTcxNDU2MH0.vx0IZIVHbSKABucxWM2_mPXFBVOIVODRs_YVRiC2eVg','Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({site:location.hostname,path:location.pathname.slice(0,512),referrer:(document.referrer||'').slice(0,1024),visitor:v})}).catch(function(){});}catch(e){}})();
     </script>
+    <!-- BEACON:END -->
   </head>
   <body>
     <div id="root"></div>
