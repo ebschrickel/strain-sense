@@ -1,28 +1,37 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const BEACON_BLOCK = /[ \t]*<!-- BEACON:START[\s\S]*?<!-- BEACON:END -->\n?/
+const WEB_ONLY_BLOCKS = [
+  /[ \t]*<!-- BEACON:START[\s\S]*?<!-- BEACON:END -->\n?/,
+  /[ \t]*<!-- WEBONLY:START[\s\S]*?<!-- WEBONLY:END -->\n?/,
+]
 
 /**
- * The pageview beacon belongs on the website only. Native builds go through
- * `npm run build` + `npx cap sync`, so the default must be beacon-free — if it
- * ships inside the apps it collects a persistent visitor id and contradicts the
- * "no data collected" declarations on both stores.
+ * Some markup belongs on the website only. Native builds go through
+ * `npm run build` + `npx cap sync`, so the default must exclude all of it:
  *
- * Opt in with `npm run build:web` (what Vercel runs). Failing the wrong way just
- * costs the website its analytics, which is the cheap direction to fail.
+ * - BEACON — the pageview beacon. Inside the apps it collects a persistent
+ *   visitor id and contradicts the "no data collected" store declarations.
+ * - WEBONLY — the privacy link that beacon obliges the website to show. The
+ *   apps disclose through their store listings instead, and a stray web
+ *   footer pinned under a native view is just wrong.
+ *
+ * Opt in with `npm run build:web` (what Vercel runs). Failing the wrong way
+ * only costs the website its analytics and a footer link, which is the cheap
+ * direction to fail.
  */
-function stripWebOnlyBeacon() {
-  const includeBeacon = process.env.SS_WEB_BEACON === '1'
+function stripWebOnlyBlocks() {
+  const includeWebOnly = process.env.SS_WEB_BEACON === '1'
   return {
-    name: 'strip-web-only-beacon',
+    name: 'strip-web-only-blocks',
     transformIndexHtml(html) {
-      return includeBeacon ? html : html.replace(BEACON_BLOCK, '')
+      if (includeWebOnly) return html
+      return WEB_ONLY_BLOCKS.reduce((out, block) => out.replace(block, ''), html)
     },
   }
 }
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), stripWebOnlyBeacon()],
+  plugins: [react(), stripWebOnlyBlocks()],
 })
