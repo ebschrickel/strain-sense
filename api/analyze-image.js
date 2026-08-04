@@ -1,14 +1,41 @@
 // Serverless proxy — keeps ANTHROPIC_API_KEY off the device bundle.
-// Deploy to Vercel. Set ANTHROPIC_API_KEY in Vercel environment variables.
-// CORS is open to allow requests from the Capacitor WebView origin.
+//
+// Gated. No shipped client calls this endpoint: src/StrainSense.jsx posts only
+// to /api/ocr. Left open, this route handed the Anthropic key to anyone who
+// found the URL, at our cost. It now fails closed — if ANALYZE_PROXY_SECRET is
+// unset the route behaves as if it does not exist, so a deploy that forgets the
+// secret leaves the key unreachable rather than exposed.
+//
+// To use it: set ANALYZE_PROXY_SECRET in the Vercel project and send the same
+// value in the x-analyze-key header.
+//
+// CORS is deliberately absent. Nothing calls this from a browser, and omitting
+// the headers means no cross-origin page can reach it at all.
+
+import { timingSafeEqual } from "node:crypto";
+
+function isAuthorized(req) {
+  const expected = process.env.ANALYZE_PROXY_SECRET;
+  if (!expected) return false;
+
+  const presented = req.headers["x-analyze-key"];
+  if (typeof presented !== "string" || presented.length === 0) return false;
+
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  // Unauthorized callers get an indistinguishable 404 whether or not the secret
+  // is configured, so the response is never an oracle for the gate's state.
+  if (req.method !== "POST" || !isAuthorized(req)) {
+    if (!process.env.ANALYZE_PROXY_SECRET) {
+      console.warn("[analyze-image] rejected: ANALYZE_PROXY_SECRET is not set");
+    }
+    return res.status(404).json({ error: "Not found" });
+  }
 
   const { imageBase64, mediaType } = req.body;
   if (!imageBase64 || !mediaType) {
@@ -50,7 +77,7 @@ export default async function handler(req, res) {
     }
 
     const text = data.content?.map(c => c.text || "").join("") || "";
-    console.log("[analyze-image] status:", upstreamStatus, "| text length:", text.length, "| preview:", text.slice(0, 100));
+    console.log("[analyze-image] status:", upstreamStatus, "| text length:", text.length);
     return res.status(200).json({ text });
   } catch (err) {
     console.error("Anthropic proxy error:", err);

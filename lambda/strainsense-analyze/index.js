@@ -4,8 +4,30 @@
 // Falls back to Lambda env var ANTHROPIC_API_KEY
 
 const { SSMClient, GetParameterCommand } = require("@aws-sdk/client-ssm");
+const { timingSafeEqual } = require("node:crypto");
 
 const ssmClient = new SSMClient({ region: process.env.AWS_REGION || "us-east-2" });
+
+// Gated. No shipped client calls this endpoint — src/StrainSense.jsx posts only
+// to /ocr. Left open it handed the Anthropic key to anyone with the URL, at our
+// cost. Fails closed: with ANALYZE_PROXY_SECRET unset the route behaves as if it
+// does not exist, so a deploy that forgets the secret is safe rather than open.
+function isAuthorized(event) {
+  const expected = process.env.ANALYZE_PROXY_SECRET;
+  if (!expected) return false;
+
+  // API Gateway lowercases header names, but normalize so a direct invoke or a
+  // REST-API-style event cannot slip past the check on casing alone.
+  const headers = event.headers || {};
+  const key = Object.keys(headers).find((h) => h.toLowerCase() === "x-analyze-key");
+  const presented = key ? headers[key] : null;
+  if (typeof presented !== "string" || presented.length === 0) return false;
+
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 // Simple in-memory cache to avoid SSM lookup on every invocation
 let cachedApiKey = null;
@@ -32,17 +54,24 @@ async function getApiKey() {
   }
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Content-Type": "application/json",
-};
+// No CORS. Nothing calls this from a browser, and omitting the headers means no
+// cross-origin page can reach it at all.
+const JSON_HEADERS = { "Content-Type": "application/json" };
 
 exports.handler = async (event) => {
-  // Handle CORS preflight
-  if (event.httpMethod === "OPTIONS" || event.requestContext?.http?.method === "OPTIONS") {
-    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  const method = event.httpMethod || event.requestContext?.http?.method;
+
+  // Unauthorized callers get an indistinguishable 404 whether or not the secret
+  // is configured, so the response is never an oracle for the gate's state.
+  if (method !== "POST" || !isAuthorized(event)) {
+    if (!process.env.ANALYZE_PROXY_SECRET) {
+      console.warn("[analyze] rejected: ANALYZE_PROXY_SECRET is not set");
+    }
+    return {
+      statusCode: 404,
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ error: "Not found" }),
+    };
   }
 
   let body;
@@ -51,7 +80,7 @@ exports.handler = async (event) => {
   } catch {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
@@ -60,7 +89,7 @@ exports.handler = async (event) => {
   if (!imageBase64 || !mediaType) {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: "imageBase64 and mediaType are required" }),
     };
   }
@@ -72,7 +101,7 @@ exports.handler = async (event) => {
     console.error("[analyze] Failed to get API key:", err.message);
     return {
       statusCode: 500,
-      headers: CORS_HEADERS,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: "Server not configured" }),
     };
   }
@@ -114,31 +143,26 @@ exports.handler = async (event) => {
       console.error("[analyze] Anthropic API error:", upstreamStatus, errMsg);
       return {
         statusCode: 200,
-        headers: CORS_HEADERS,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ text: "", debug: `API error (${upstreamStatus}): ${errMsg}` }),
       };
     }
 
     const text = data.content?.map((c) => c.text || "").join("") || "";
-    console.log(
-      "[analyze] status:",
-      upstreamStatus,
-      "| text length:",
-      text.length,
-      "| preview:",
-      text.slice(0, 100)
-    );
+    // Length only — logging an excerpt would retain extracted user content in
+    // CloudWatch, which is what forces the stores' "data collected" answer.
+    console.log("[analyze] status:", upstreamStatus, "| text length:", text.length);
 
     return {
       statusCode: 200,
-      headers: CORS_HEADERS,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ text }),
     };
   } catch (err) {
     console.error("[analyze] Anthropic proxy error:", err);
     return {
       statusCode: 500,
-      headers: CORS_HEADERS,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: "Analysis failed", detail: err.message }),
     };
   }
