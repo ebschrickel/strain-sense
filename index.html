@@ -8,6 +8,27 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0a0c09" />
     <title>Strain Sense</title>
+    <!-- WEBONLY:START — link previews and canonical, WEBSITE ONLY.
+         Stripped from native builds by vite.config.js for the same reason as
+         the beacon below: inside Capacitor the origin is capacitor:// or
+         localhost, so an absolute canonical would point somewhere the app
+         isn't, and no crawler will ever read og: tags out of a WKWebView. -->
+    <meta name="description" content="Pick how you want to feel and get clear, terpene-based guidance in plain English — no jargon, no expertise required." />
+    <link rel="canonical" href="https://strain-sense.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Strain Sense" />
+    <meta property="og:title" content="Strain Sense — Terpene guidance in plain English" />
+    <meta property="og:description" content="Pick how you want to feel. Strain Sense turns a dispensary label into guidance you can act on, without needing to be an expert." />
+    <meta property="og:url" content="https://strain-sense.vercel.app/" />
+    <meta property="og:image" content="https://strain-sense.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Strain Sense — terpene guidance in plain English" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Strain Sense — Terpene guidance in plain English" />
+    <meta name="twitter:description" content="Pick how you want to feel. Strain Sense turns a dispensary label into guidance you can act on." />
+    <meta name="twitter:image" content="https://strain-sense.vercel.app/og.png" />
+    <!-- WEBONLY:END -->
     <!-- BEACON:START — first-party pageview beacon, WEBSITE ONLY.
          Stripped from the bundle entirely unless built with `npm run build:web`
          (see vite.config.js), so `npm run build` + `cap sync` can never carry it
