@@ -4,8 +4,8 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import SourcesScreen from "./SourcesScreen";
 import { startRatingSession, noteRatingError, maybePromptForReview } from "./ratingPrompt";
 import {
-  FREE_SCANS, isPaywalledPlatform, loadEntitlement, needsUnlock,
-  recordScanUsed, purchaseUnlock, restoreUnlock, onEntitlementChanged,
+  FREE_RESULTS, isPaywalledPlatform, loadEntitlement, needsUnlock,
+  recordResultUsed, purchaseUnlock, restoreUnlock, onEntitlementChanged,
 } from "./entitlement";
 
 // ═══════════════════════════════════════════════════════════
@@ -802,11 +802,12 @@ function PaywallSheet({ price, onBuy, onRestore, onClose, busy, error }) {
         <div style={{ textAlign:"center", marginBottom:"20px" }}>
           <div style={{ marginBottom:"10px" }}><Icon name="star" size={36} color={T.color.green} /></div>
           <h2 style={{ fontFamily:T.font.display, fontSize:"23px", fontWeight:750, letterSpacing:"-0.02em", margin:"0 0 8px 0", color:T.color.text }}>
-            That&apos;s your {FREE_SCANS} free scans
+            That&apos;s your {FREE_RESULTS} free results
           </h2>
           <p style={{ fontSize:"14.5px", lineHeight:1.55, margin:0, color:T.color.textMuted }}>
             Unlock Strain Sense once and it stays unlocked — every scan, every
-            terpene breakdown, on every device you sign in to. No subscription.
+            mood, every terpene breakdown, on every device you sign in to. No
+            subscription.
           </p>
         </div>
 
@@ -1593,7 +1594,7 @@ export default function StrainSense() {
   const [scanNote, setScanNote] = useState(null);
   const [entitlement, setEntitlement] = useState({
     unlocked: !isPaywalledPlatform(), grandfathered: false, price: "",
-    scansUsed: 0, freeRemaining: FREE_SCANS,
+    resultsUsed: 0, freeRemaining: FREE_RESULTS,
   });
   const [showPaywall, setShowPaywall] = useState(false);
   const [purchaseBusy, setPurchaseBusy] = useState(false);
@@ -1681,11 +1682,23 @@ export default function StrainSense() {
   };
 
   /**
-   * A scan only counts against the free allowance once it has actually
-   * produced a result — a failed OCR is not one of your three.
+   * Every route to new guidance costs one of the free results: scanning a
+   * label, typing the values in by hand, or picking a mood. Gating only the
+   * scanner would leave the app's whole promise free, since manual entry runs
+   * the same classifier and the mood presets answer the same question.
+   *
+   * Only spent once guidance actually appeared — a failed OCR is not one of
+   * your three.
    */
-  const spendFreeScan = () => {
-    recordScanUsed(entitlement).then(setEntitlement);
+  const spendFreeResult = () => {
+    recordResultUsed(entitlement).then(setEntitlement);
+  };
+
+  /** Refuse a new result and show the paywall instead. True when blocked. */
+  const blockedByPaywall = () => {
+    if (!needsUnlock(entitlement)) return false;
+    setShowPaywall(true);
+    return true;
   };
 
   const handleBuyUnlock = async () => {
@@ -1721,10 +1734,10 @@ export default function StrainSense() {
   };
 
   const handleFormAnalyze = (p) => {
-    if (needsUnlock(entitlement)) { setShowPaywall(true); return; }
+    if (blockedByPaywall()) return;
     setError(null);
     setParsed(p); setResult(classify(p, tolerance)); setView("result");
-    spendFreeScan();
+    spendFreeResult();
   };
 
   // Core image analysis — shared by both native Camera and web file input paths
@@ -1732,7 +1745,7 @@ export default function StrainSense() {
     // Check before the work, not after: OCR plus the analyze call is the
     // expensive part, and there is no point spending it on a scan we are
     // about to refuse to show.
-    if (needsUnlock(entitlement)) { setShowPaywall(true); return; }
+    if (blockedByPaywall()) return;
 
     setError(null); setScanNote(null); setDebugLog([]); setLoading(true);
     const log = [];
@@ -1831,7 +1844,7 @@ export default function StrainSense() {
       );
 
       setParsed(p); setResult(classify(p, tolerance)); setView("result");
-      spendFreeScan();
+      spendFreeResult();
     } catch (err) {
       log.push(`CATCH: ${err?.name}: ${err?.message}`);
       setDebugLog(log);
@@ -2134,7 +2147,10 @@ export default function StrainSense() {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"16px" }}>
               {MOOD_PRESETS.map(m => (
-                <div key={m.id} onClick={()=>{ setSelectedMood(m.id); setView("moodResult"); }} style={{
+                <div key={m.id} onClick={()=>{
+                  if (blockedByPaywall()) return;
+                  setSelectedMood(m.id); setView("moodResult"); spendFreeResult();
+                }} style={{
                   background:T.color.surface, borderRadius:T.radius.lg, padding:"16px",
                   border:`1.5px solid ${T.color.borderLight}`,
                   cursor:"pointer", transition:"all 0.12s",

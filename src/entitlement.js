@@ -2,24 +2,33 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
 // ─── ENTITLEMENT ────────────────────────────────────────────
-// Strain Sense is free to download on iOS with a few scans on the house, then
-// a one-time unlock. On Google Play it is still a paid app, so Android users
-// have already bought everything and must never see a paywall — every check
-// here short-circuits to unlocked off iOS.
+// Strain Sense is free to download on iOS with a few results on the house,
+// then a one-time unlock. On Google Play it is still a paid app, so Android
+// users have already bought everything and must never see a paywall — every
+// check here short-circuits to unlocked off iOS.
+//
+// A "result" is any route that produces new guidance, not just the camera:
+// scanning a label, typing values in by hand, and picking a mood all count.
+// Gating only the scanner would leave the app's whole promise free, since
+// manual entry runs the same classifier and the mood presets answer the same
+// question — you would just be charging for OCR.
+//
+// Deriving from results already paid for stays free: the saved library, the
+// counter card, comparing two saved products, and the sources reading.
 
 const StrainSenseIAP = registerPlugin("StrainSenseIAP");
 
-export const FREE_SCANS = 3;
+export const FREE_RESULTS = 3;
 
-const SCANS_KEY = "entitlement.scansUsed.v1";
+const USED_KEY = "entitlement.resultsUsed.v1";
 const IOS = "ios";
 
 /** Only iOS sells an unlock. Everywhere else is already paid for. */
 export const isPaywalledPlatform = () => Capacitor.getPlatform() === IOS;
 
-async function readScansUsed() {
+async function readResultsUsed() {
   try {
-    const { value } = await Preferences.get({ key: SCANS_KEY });
+    const { value } = await Preferences.get({ key: USED_KEY });
     const parsed = Number.parseInt(value ?? "0", 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   } catch {
@@ -35,10 +44,10 @@ async function readScansUsed() {
  */
 export async function loadEntitlement() {
   if (!isPaywalledPlatform()) {
-    return { unlocked: true, grandfathered: false, scansUsed: 0, freeRemaining: FREE_SCANS, price: "" };
+    return { unlocked: true, grandfathered: false, resultsUsed: 0, freeRemaining: FREE_RESULTS, price: "" };
   }
 
-  const scansUsed = await readScansUsed();
+  const resultsUsed = await readResultsUsed();
 
   let status = { unlocked: false, grandfathered: false, price: "" };
   try {
@@ -52,31 +61,31 @@ export async function loadEntitlement() {
     unlocked: Boolean(status.unlocked),
     grandfathered: Boolean(status.grandfathered),
     price: status.price || "",
-    scansUsed,
-    freeRemaining: Math.max(0, FREE_SCANS - scansUsed),
+    resultsUsed,
+    freeRemaining: Math.max(0, FREE_RESULTS - resultsUsed),
   };
 }
 
-/** True when this scan should be stopped and the paywall shown instead. */
+/** True when this request for new guidance should be stopped and the paywall shown. */
 export function needsUnlock(entitlement) {
   if (!isPaywalledPlatform()) return false;
   return !entitlement.unlocked && entitlement.freeRemaining <= 0;
 }
 
 /**
- * Count a scan against the free allowance. Only called once a scan has
- * actually produced a result — a failed scan is not one of your three.
+ * Spend one of the free results. Only called once guidance has actually been
+ * produced — a scan that errored is not one of your three.
  */
-export async function recordScanUsed(entitlement) {
+export async function recordResultUsed(entitlement) {
   if (!isPaywalledPlatform() || entitlement.unlocked) return entitlement;
 
-  const scansUsed = entitlement.scansUsed + 1;
+  const resultsUsed = entitlement.resultsUsed + 1;
   try {
-    await Preferences.set({ key: SCANS_KEY, value: String(scansUsed) });
+    await Preferences.set({ key: USED_KEY, value: String(resultsUsed) });
   } catch {
-    // Losing the count costs a free scan, not a sale. Never surface it.
+    // Losing the count costs a free result, not a sale. Never surface it.
   }
-  return { ...entitlement, scansUsed, freeRemaining: Math.max(0, FREE_SCANS - scansUsed) };
+  return { ...entitlement, resultsUsed, freeRemaining: Math.max(0, FREE_RESULTS - resultsUsed) };
 }
 
 /**
