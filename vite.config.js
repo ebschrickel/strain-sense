@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Global on purpose. Without /g, String.replace strips only the FIRST match,
+// so adding a second WEBONLY block silently leaves the other one in the native
+// bundle — which is how the website's privacy footer nearly shipped inside the
+// apps. Any number of blocks, any order, all removed.
 const WEB_ONLY_BLOCKS = [
-  /[ \t]*<!-- BEACON:START[\s\S]*?<!-- BEACON:END -->\n?/,
-  /[ \t]*<!-- WEBONLY:START[\s\S]*?<!-- WEBONLY:END -->\n?/,
+  /[ \t]*<!-- BEACON:START[\s\S]*?<!-- BEACON:END -->\n?/g,
+  /[ \t]*<!-- WEBONLY:START[\s\S]*?<!-- WEBONLY:END -->\n?/g,
 ]
 
 /**
