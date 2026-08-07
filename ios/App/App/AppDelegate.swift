@@ -15,6 +15,20 @@ class AppViewController: CAPBridgeViewController {
         webView?.scrollView.alwaysBounceVertical = false
         webView?.scrollView.alwaysBounceHorizontal = false
     }
+
+    /// Capacitor only auto-discovers plugins that ship as packages. Anything
+    /// defined in the app target has to be handed to the bridge here, or the
+    /// JS side gets "plugin is not implemented on ios" at runtime — while
+    /// still compiling perfectly.
+    ///
+    /// That failure is silent by design on our side: loadEntitlement() swallows
+    /// a getStatus() error so a store outage can't lock anyone out. Without
+    /// this registration, that same catch would report grandfathered:false for
+    /// every existing $9.99 customer and paywall the people who already paid.
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(StrainSenseIAPPlugin())
+        bridge?.registerPluginInstance(StrainSenseSecureStorePlugin())
+    }
 }
 
 @UIApplicationMain
@@ -86,6 +100,88 @@ private enum IAP {
     /// ⚠️ The first free build must be HIGHER than this. Ship it as build 6 or
     /// above, or every new customer is grandfathered in for free.
     static let lastPaidBuild = 5
+}
+
+/// Key-value storage that survives deleting the app.
+///
+/// The free-results counter cannot live in UserDefaults: iOS wipes a deleted
+/// app's container, so the count resets on reinstall and "three free results"
+/// quietly becomes "three free results per reinstall". Keychain items outlive
+/// the app, which is the whole reason this exists.
+///
+/// kSecAttrAccessibleAfterFirstUnlock rather than ...ThisDeviceOnly, so the
+/// count also travels through an encrypted backup to a replacement phone.
+@objc(StrainSenseSecureStorePlugin)
+public class StrainSenseSecureStorePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "StrainSenseSecureStorePlugin"
+    public let jsName = "StrainSenseSecureStore"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "get", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise),
+    ]
+
+    private static let service = "com.resonantlabs.strainsense.entitlement"
+
+    private static func baseQuery(key: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
+        ]
+    }
+
+    /// Resolves `{}` when nothing is stored, so the JS side sees `undefined`
+    /// rather than having to distinguish an empty string from a missing key.
+    @objc func get(_ call: CAPPluginCall) {
+        guard let key = call.getString("key") else {
+            call.reject("key is required")
+            return
+        }
+
+        var query = Self.baseQuery(key: key)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let value = String(data: data, encoding: .utf8)
+        else {
+            call.resolve([:])
+            return
+        }
+        call.resolve(["value": value])
+    }
+
+    @objc func set(_ call: CAPPluginCall) {
+        guard let key = call.getString("key"), let value = call.getString("value") else {
+            call.reject("key and value are required")
+            return
+        }
+
+        let query = Self.baseQuery(key: key)
+        let data = Data(value.utf8)
+
+        var status = SecItemUpdate(
+            query as CFDictionary,
+            [kSecValueData as String: data] as CFDictionary
+        )
+
+        if status == errSecItemNotFound {
+            var insert = query
+            insert[kSecValueData as String] = data
+            insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            status = SecItemAdd(insert as CFDictionary, nil)
+        }
+
+        guard status == errSecSuccess else {
+            call.reject("Keychain write failed (\(status))")
+            return
+        }
+        call.resolve()
+    }
 }
 
 @objc(StrainSenseIAPPlugin)

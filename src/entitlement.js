@@ -15,8 +15,11 @@ import { Preferences } from "@capacitor/preferences";
 //
 // Deriving from results already paid for stays free: the saved library, the
 // counter card, comparing two saved products, and the sources reading.
+//
+// The counter is Keychain-backed so it outlives deleting the app.
 
 const StrainSenseIAP = registerPlugin("StrainSenseIAP");
+const SecureStore = registerPlugin("StrainSenseSecureStore");
 
 export const FREE_RESULTS = 3;
 
@@ -26,14 +29,37 @@ const IOS = "ios";
 /** Only iOS sells an unlock. Everywhere else is already paid for. */
 export const isPaywalledPlatform = () => Capacitor.getPlatform() === IOS;
 
+const toCount = (raw) => {
+  const parsed = Number.parseInt(raw ?? "0", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+/**
+ * The count is kept in two places and the HIGHER one wins.
+ *
+ * Keychain is the durable copy — it survives deleting the app, which
+ * UserDefaults does not, so without it the three free results reset on every
+ * reinstall. Preferences is the fast local mirror. Taking the max means
+ * clearing either one on its own cannot hand anybody more free results.
+ *
+ * Both reads fail to 0 rather than to "exhausted": a storage glitch should
+ * cost a few free results, never lock a paying customer out of the app.
+ */
 async function readResultsUsed() {
-  try {
-    const { value } = await Preferences.get({ key: USED_KEY });
-    const parsed = Number.parseInt(value ?? "0", 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  } catch {
-    return 0;
-  }
+  const [secure, local] = await Promise.all([
+    SecureStore.get({ key: USED_KEY }).then((r) => r?.value).catch(() => null),
+    Preferences.get({ key: USED_KEY }).then((r) => r?.value).catch(() => null),
+  ]);
+  return Math.max(toCount(secure), toCount(local));
+}
+
+/** Write both copies. A Keychain failure must not block the local one. */
+async function writeResultsUsed(count) {
+  const value = String(count);
+  await Promise.allSettled([
+    SecureStore.set({ key: USED_KEY, value }),
+    Preferences.set({ key: USED_KEY, value }),
+  ]);
 }
 
 /**
@@ -80,11 +106,7 @@ export async function recordResultUsed(entitlement) {
   if (!isPaywalledPlatform() || entitlement.unlocked) return entitlement;
 
   const resultsUsed = entitlement.resultsUsed + 1;
-  try {
-    await Preferences.set({ key: USED_KEY, value: String(resultsUsed) });
-  } catch {
-    // Losing the count costs a free result, not a sale. Never surface it.
-  }
+  await writeResultsUsed(resultsUsed);
   return { ...entitlement, resultsUsed, freeRemaining: Math.max(0, FREE_RESULTS - resultsUsed) };
 }
 
@@ -130,3 +152,4 @@ export async function onEntitlementChanged(handler) {
     return () => {};
   }
 }
+
