@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import Capacitor
+import StoreKit
 
 // The app's root view controller. Disables the WKWebView's rubber-band
 // overscroll so the fixed glass background can't drift and no white edge
@@ -61,4 +62,156 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+}
+
+// MARK: - In-app purchase
+//
+// Kept in this file for the same reason AppViewController is: it lands in the
+// App target's build phase without editing the Xcode project.
+
+/// The single product: one permanent unlock, priced to match the $9.99 the app
+/// used to cost as a paid download.
+///
+/// iOS only. Google Play still sells Strain Sense as a paid app, so Android
+/// never reaches this code and never sees a paywall — the JS side gates on
+/// platform before asking for any of it.
+private enum IAP {
+    /// Must match the non-consumable product id created in App Store Connect.
+    static let unlockProductID = "com.resonantlabs.strainsense.unlock"
+
+    /// Build number (CFBundleVersion) of the last release sold as a PAID
+    /// download. Anyone whose original purchase was at or below this already
+    /// bought the whole app and must never meet a paywall.
+    ///
+    /// ⚠️ The first free build must be HIGHER than this. Ship it as build 6 or
+    /// above, or every new customer is grandfathered in for free.
+    static let lastPaidBuild = 5
+}
+
+@objc(StrainSenseIAPPlugin)
+public class StrainSenseIAPPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "StrainSenseIAPPlugin"
+    public let jsName = "StrainSenseIAP"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+    ]
+
+    private var updatesTask: Task<Void, Never>?
+
+    /// StoreKit can hand over a purchase long after `purchase()` returned — Ask
+    /// To Buy approvals and bank confirmations both arrive here. An unfinished
+    /// transaction is retried forever, so this listener runs for the app's life.
+    override public func load() {
+        updatesTask = Task { [weak self] in
+            for await update in Transaction.updates {
+                guard case .verified(let transaction) = update else { continue }
+                await transaction.finish()
+                self?.notifyListeners("entitlementChanged", data: ["unlocked": true])
+            }
+        }
+    }
+
+    deinit {
+        updatesTask?.cancel()
+    }
+
+    @objc func getStatus(_ call: CAPPluginCall) {
+        Task {
+            let grandfathered = await Self.isGrandfathered()
+            let owned = await Self.ownsUnlock()
+            // Resolved up front: `??` takes an autoclosure, which cannot be async.
+            let price = await Self.unlockProduct()?.displayPrice
+            call.resolve([
+                "unlocked": grandfathered || owned,
+                "grandfathered": grandfathered,
+                "price": price ?? "",
+            ])
+        }
+    }
+
+    @objc func purchase(_ call: CAPPluginCall) {
+        Task {
+            guard let product = await Self.unlockProduct() else {
+                call.reject("The unlock isn't available from the App Store right now.")
+                return
+            }
+            do {
+                switch try await product.purchase() {
+                case .success(let verification):
+                    guard case .verified(let transaction) = verification else {
+                        call.reject("That purchase couldn't be verified.")
+                        return
+                    }
+                    await transaction.finish()
+                    call.resolve(["unlocked": true, "cancelled": false, "pending": false])
+
+                case .userCancelled:
+                    call.resolve(["unlocked": false, "cancelled": true, "pending": false])
+
+                case .pending:
+                    // Ask To Buy, or a bank wanting a second factor. Resolves
+                    // later through the Transaction.updates listener above.
+                    call.resolve(["unlocked": false, "cancelled": false, "pending": true])
+
+                @unknown default:
+                    call.resolve([
+                        "unlocked": await Self.ownsUnlock(),
+                        "cancelled": false,
+                        "pending": false,
+                    ])
+                }
+            } catch {
+                call.reject(error.localizedDescription)
+            }
+        }
+    }
+
+    @objc func restore(_ call: CAPPluginCall) {
+        Task {
+            try? await AppStore.sync()
+            // Both resolved up front: `||` short-circuits through an
+            // autoclosure, which cannot be async.
+            let owned = await Self.ownsUnlock()
+            let grandfathered = await Self.isGrandfathered()
+            call.resolve(["unlocked": owned || grandfathered])
+        }
+    }
+
+    private static func unlockProduct() async -> Product? {
+        guard let products = try? await Product.products(for: [IAP.unlockProductID]) else {
+            return nil
+        }
+        return products.first
+    }
+
+    private static func ownsUnlock() async -> Bool {
+        for await entitlement in Transaction.currentEntitlements {
+            if case .verified(let transaction) = entitlement,
+               transaction.productID == IAP.unlockProductID {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Everyone who paid for the app while it cost money keeps all of it.
+    ///
+    /// ⚠️ On iOS `originalAppVersion` is the **CFBundleVersion** — the build
+    /// number — not the marketing version. Comparing it against "1.1.1" would
+    /// never match and would quietly paywall every existing customer.
+    ///
+    /// ⚠️ Sandbox and TestFlight report "1.0" regardless of real history, so
+    /// grandfathering cannot be proven before release. An unreadable
+    /// transaction is treated as not-grandfathered on purpose: the worst case
+    /// is a paying customer seeing a paywall and tapping Restore, rather than
+    /// the app being given away to everyone.
+    private static func isGrandfathered() async -> Bool {
+        guard let result = try? await AppTransaction.shared,
+              case .verified(let appTransaction) = result,
+              let originalBuild = Int(appTransaction.originalAppVersion)
+        else { return false }
+        return originalBuild <= IAP.lastPaidBuild
+    }
 }

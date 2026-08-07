@@ -2,6 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import SourcesScreen from "./SourcesScreen";
+import { startRatingSession, noteRatingError, maybePromptForReview } from "./ratingPrompt";
+import {
+  FREE_SCANS, isPaywalledPlatform, loadEntitlement, needsUnlock,
+  recordScanUsed, purchaseUnlock, restoreUnlock, onEntitlementChanged,
+} from "./entitlement";
 
 // ═══════════════════════════════════════════════════════════
 // STRAIN SENSE v3 — Make sense of what you're taking.
@@ -776,6 +781,64 @@ function buildBudtenderScript(parsed, result) {
   return `I'm looking for a ${effectWord}, ${timingWord} ${productWord} with ${potencyWord} THC${cbdPart}${terpPart}.`;
 }
 
+// ─── PAYWALL ────────────────────────────────────────────────
+// iOS only. Google Play still sells the app outright, so Android users have
+// already paid and never reach this.
+function PaywallSheet({ price, onBuy, onRestore, onClose, busy, error }) {
+  return (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(5,7,5,0.60)",
+      backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      zIndex:1000, padding:"20px",
+    }} onClick={busy ? undefined : onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"rgba(24,28,22,0.85)", borderRadius:T.radius.lg,
+        border:`1px solid ${T.color.border}`,
+        padding:"32px 28px", maxWidth:"400px", width:"100%",
+        boxShadow:"0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.14)",
+        ...T.glass,
+      }}>
+        <div style={{ textAlign:"center", marginBottom:"20px" }}>
+          <div style={{ marginBottom:"10px" }}><Icon name="star" size={36} color={T.color.green} /></div>
+          <h2 style={{ fontFamily:T.font.display, fontSize:"23px", fontWeight:750, letterSpacing:"-0.02em", margin:"0 0 8px 0", color:T.color.text }}>
+            That&apos;s your {FREE_SCANS} free scans
+          </h2>
+          <p style={{ fontSize:"14.5px", lineHeight:1.55, margin:0, color:T.color.textMuted }}>
+            Unlock Strain Sense once and it stays unlocked — every scan, every
+            terpene breakdown, on every device you sign in to. No subscription.
+          </p>
+        </div>
+
+        {error && (
+          <p style={{ fontSize:"13px", lineHeight:1.5, margin:"0 0 14px 0", color:T.color.disliked, textAlign:"center" }}>
+            {error}
+          </p>
+        )}
+
+        <Btn primary onClick={onBuy} disabled={busy} style={{ width:"100%", justifyContent:"center" }}>
+          {busy ? "One moment…" : price ? `Unlock — ${price}` : "Unlock"}
+        </Btn>
+
+        {/* Apple requires a visible restore path for a non-consumable. */}
+        <button onClick={onRestore} disabled={busy} style={{
+          width:"100%", background:"none", border:"none", cursor: busy ? "default" : "pointer",
+          color:T.color.textMuted, fontSize:"13.5px", padding:"14px 0 4px 0",
+        }}>
+          Already bought it? Restore
+        </button>
+
+        <button onClick={onClose} disabled={busy} style={{
+          width:"100%", background:"none", border:"none", cursor: busy ? "default" : "pointer",
+          color:T.color.textMuted, fontSize:"13.5px", padding:"4px 0 0 0", opacity:0.75,
+        }}>
+          Not now
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CounterCard({ parsed, result, onClose }) {
   const timingMeta = result.timing.includes("PM")
     ? {icon:"moon", c:T.color.pm}
@@ -1528,6 +1591,13 @@ export default function StrainSense() {
   const [ageVerified, setAgeVerified] = useState(() => !!localStorage.getItem(AGE_GATE_KEY));
   const [disclaimerSeen, setDisclaimerSeen] = useState(() => !!localStorage.getItem(DISCLAIMER_KEY));
   const [scanNote, setScanNote] = useState(null);
+  const [entitlement, setEntitlement] = useState({
+    unlocked: !isPaywalledPlatform(), grandfathered: false, price: "",
+    scansUsed: 0, freeRemaining: FREE_SCANS,
+  });
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const [purchaseError, setPurchaseError] = useState(null);
   const [debugLog, setDebugLog] = useState([]);
   const fileRef = useRef();
 
@@ -1559,6 +1629,31 @@ export default function StrainSense() {
     loadSaved().then(items => { setSaved(items); setStorageReady(true); });
   }, []);
 
+  // Count this session toward the rating prompt. Counting only — nothing is
+  // ever asked on a cold open.
+  useEffect(() => { startRatingSession(); }, []);
+
+  // Entitlement. Off iOS this resolves to unlocked immediately — Play still
+  // sells the app outright, so those users have already paid for everything.
+  useEffect(() => {
+    let cancelled = false;
+    loadEntitlement().then(e => { if (!cancelled) setEntitlement(e); });
+
+    // Ask To Buy and bank confirmations land long after the purchase call
+    // returned, so the unlock arrives as a push rather than a return value.
+    let unsubscribe = () => {};
+    onEntitlementChanged(() => {
+      setEntitlement(prev => ({ ...prev, unlocked: true }));
+      setShowPaywall(false);
+    }).then(fn => { if (cancelled) fn(); else unsubscribe = fn; });
+
+    return () => { cancelled = true; unsubscribe(); };
+  }, []);
+
+  // Any error the user actually sees disarms the prompt for the rest of the
+  // session. Watching `error` catches every setError path at once.
+  useEffect(() => { if (error) noteRatingError(); }, [error]);
+
   // Persist on change
   useEffect(() => {
     if (storageReady) saveToDisk(saved);
@@ -1573,15 +1668,72 @@ export default function StrainSense() {
 
   const updateFeedback = (id, feedback) => {
     setSaved(prev => prev.map(e => e.id===id ? {...e, feedback} : e));
+
+    // "liked" is the strongest satisfaction signal in the app — the user is
+    // telling us the recommendation actually worked. Not awaited: a rating
+    // dialog must never delay the feedback button responding.
+    if (feedback === "liked") {
+      maybePromptForReview({
+        activated: saved.length >= 2,
+        busy: showCounter || loading || !ageVerified || !disclaimerSeen,
+      });
+    }
+  };
+
+  /**
+   * A scan only counts against the free allowance once it has actually
+   * produced a result — a failed OCR is not one of your three.
+   */
+  const spendFreeScan = () => {
+    recordScanUsed(entitlement).then(setEntitlement);
+  };
+
+  const handleBuyUnlock = async () => {
+    setPurchaseBusy(true); setPurchaseError(null);
+    const result = await purchaseUnlock();
+    setPurchaseBusy(false);
+
+    if (result.unlocked) {
+      setEntitlement(prev => ({ ...prev, unlocked: true }));
+      setShowPaywall(false);
+      return;
+    }
+    // A cancel is a decision, not a failure — say nothing and let them out.
+    if (result.cancelled) { setShowPaywall(false); return; }
+    if (result.pending) {
+      setPurchaseError("Waiting on approval — this unlocks itself once it clears.");
+      return;
+    }
+    setPurchaseError(result.error || "That didn't go through.");
+  };
+
+  const handleRestoreUnlock = async () => {
+    setPurchaseBusy(true); setPurchaseError(null);
+    const { unlocked } = await restoreUnlock();
+    setPurchaseBusy(false);
+
+    if (unlocked) {
+      setEntitlement(prev => ({ ...prev, unlocked: true }));
+      setShowPaywall(false);
+    } else {
+      setPurchaseError("No previous purchase found on this Apple Account.");
+    }
   };
 
   const handleFormAnalyze = (p) => {
+    if (needsUnlock(entitlement)) { setShowPaywall(true); return; }
     setError(null);
     setParsed(p); setResult(classify(p, tolerance)); setView("result");
+    spendFreeScan();
   };
 
   // Core image analysis — shared by both native Camera and web file input paths
   const analyzeImageBase64 = async (b64, mt) => {
+    // Check before the work, not after: OCR plus the analyze call is the
+    // expensive part, and there is no point spending it on a scan we are
+    // about to refuse to show.
+    if (needsUnlock(entitlement)) { setShowPaywall(true); return; }
+
     setError(null); setScanNote(null); setDebugLog([]); setLoading(true);
     const log = [];
     const addLog = (msg) => { log.push(msg); console.log("[scan]", msg); };
@@ -1679,6 +1831,7 @@ export default function StrainSense() {
       );
 
       setParsed(p); setResult(classify(p, tolerance)); setView("result");
+      spendFreeScan();
     } catch (err) {
       log.push(`CATCH: ${err?.name}: ${err?.message}`);
       setDebugLog(log);
@@ -2218,6 +2371,17 @@ export default function StrainSense() {
 
       {showCounter && parsed && result && (
         <CounterCard parsed={parsed} result={result} onClose={()=>setShowCounter(false)} />
+      )}
+
+      {showPaywall && (
+        <PaywallSheet
+          price={entitlement.price}
+          busy={purchaseBusy}
+          error={purchaseError}
+          onBuy={handleBuyUnlock}
+          onRestore={handleRestoreUnlock}
+          onClose={()=>{ setShowPaywall(false); setPurchaseError(null); }}
+        />
       )}
     </div>
   );
