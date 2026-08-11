@@ -40,7 +40,18 @@ export default async function handler(req, res) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
     });
-    const data = await resp.json();
+
+    // A rejected key answers 403 with a body that has no ErrorMessage and no
+    // ParsedResults, which used to read as an ordinary "empty" result. The
+    // fallback key then quietly covered for it, so a dead key looked like a
+    // blank scan for months. Surface the transport failure distinctly.
+    if (!resp.ok) {
+      return { text: "", error: `HTTP ${resp.status}`, dead: resp.status === 401 || resp.status === 403 };
+    }
+
+    const data = await resp.json().catch(() => null);
+    if (!data) return { text: "", error: "unparseable response" };
+
     return {
       text: data.ParsedResults?.[0]?.ParsedText || "",
       error: data.ErrorMessage || data.ParsedResults?.[0]?.ErrorMessage || null,
@@ -52,11 +63,22 @@ export default async function handler(req, res) {
     let text = "", lastError = null;
 
     for (const { key, label } of keys) {
+      let keyIsDead = false;
       for (const engine of ["2", "1"]) {
         const result = await runOcr(key, engine);
-        attempts.push(`${label}/engine${engine}:${result.text ? "ok" : (result.error ? "error" : "empty")}`);
+        attempts.push(
+          `${label}/engine${engine}:${result.text ? "ok" : (result.error ? `error(${result.error})` : "empty")}`,
+        );
         if (result.error) lastError = result.error;
         if (result.text.trim()) { text = result.text; break; }
+        // A rejected key is rejected on every engine — don't pay for the second
+        // round-trip just to be told no again.
+        if (result.dead) { keyIsDead = true; break; }
+      }
+      // A rejected key will not become valid on the second engine — stop paying
+      // for the round-trip and move to the next key.
+      if (keyIsDead && label === "configured") {
+        console.error("[ocr] configured OCR_SPACE_API_KEY is REJECTED — running on the shared fallback key");
       }
       if (text) break;
     }
