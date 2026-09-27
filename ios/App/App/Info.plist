@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Strain Sense</string>
+	<string>Strain Sense</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,8 +22,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>StrainSense uses your camera to scan cannabis strain labels and flower for identification.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>StrainSense can save strain scan results to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>StrainSense can analyze photos from your library to identify cannabis strains.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -47,12 +55,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-
-	<key>NSCameraUsageDescription</key>
-	<string>StrainSense uses your camera to scan cannabis strain labels and flower for identification.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>StrainSense can analyze photos from your library to identify cannabis strains.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>StrainSense can save strain scan results to your photo library.</string>
 </dict>
 </plist>

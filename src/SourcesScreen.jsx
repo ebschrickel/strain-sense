@@ -42,7 +42,7 @@ const T = {
 function openExternal(url) {
   try {
     window.open(url, "_system");
-  } catch (e) {
+  } catch {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 }

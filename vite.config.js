@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json' with { type: 'json' }
 
 // Global on purpose. Without /g, String.replace strips only the FIRST match,
 // so adding a second WEBONLY block silently leaves the other one in the native
@@ -38,4 +39,10 @@ function stripWebOnlyBlocks() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), stripWebOnlyBlocks()],
+  define: {
+    // The rating prompt asks at most once per released version. If package.json
+    // lags a native release the gate simply stays shut, which is the safe way to
+    // fail — but bump it each release so a new version can earn a fresh prompt.
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
 })
