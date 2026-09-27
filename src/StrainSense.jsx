@@ -1505,7 +1505,7 @@ function SavedRow({ entry, onDelete, onSelect, selected, onFeedback }) {
 }
 
 // ─── QUICK COMPARE VIEW ─────────────────────────────────────
-function QuickCompare({ entryA, saved, onPickB, onBack }) {
+function QuickCompare({ entryA, saved, onBack }) {
   const [selId, setSelId] = useState(null);
   const entryB = saved.find(e => e.id === selId);
 
@@ -1599,7 +1599,7 @@ export default function StrainSense() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [purchaseBusy, setPurchaseBusy] = useState(false);
   const [purchaseError, setPurchaseError] = useState(null);
-  const [debugLog, setDebugLog] = useState([]);
+  const [, setDebugLog] = useState([]);
   const fileRef = useRef();
 
   const confirmAge = () => {
@@ -1938,7 +1938,6 @@ export default function StrainSense() {
     setSaved(prev=>prev.filter(e=>e.id!==id));
   };
 
-  const isHomeish = ["home","text","image","result","compare","mood","moodResult"].includes(view);
 
   if (!ageVerified) return <AgeGate onConfirm={confirmAge} />;
 
