@@ -6,6 +6,13 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        // Local plugins must be registered before super.onCreate builds the bridge.
+        registerPlugin(AgeSignalsPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
         // Disable the WebView overscroll glow/stretch so the fixed glass

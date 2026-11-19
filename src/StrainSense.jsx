@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import SourcesScreen from "./SourcesScreen";
 import { startRatingSession, noteRatingError, maybePromptForReview } from "./ratingPrompt";
+import { checkAgeSignal, AGE } from "./ageSignal";
 import {
   FREE_RESULTS, isPaywalledPlatform, loadEntitlement, needsUnlock,
   recordResultUsed, purchaseUnlock, restoreUnlock, onEntitlementChanged,
@@ -558,7 +559,7 @@ const AGE_GATE_KEY    = "strain-sense-age-verified";
 const DISCLAIMER_KEY  = "strain-sense-disclaimer-seen";
 
 // ─── AGE GATE ───────────────────────────────────────────────
-function AgeGate({ onConfirm }) {
+function AgeGate({ onConfirm, blocked = false }) {
   return (
     <div style={{
       position:"fixed", inset:0, zIndex:9999,
@@ -579,6 +580,14 @@ function AgeGate({ onConfirm }) {
         This app contains information about cannabis products.
         You must be <strong style={{color:T.color.text}}>21 or older</strong> to continue.
       </p>
+      {blocked ? (
+        // A Play age signal says under 18: no self-attestation can override it.
+        <p style={{ fontSize:"14px", color:T.color.textSec, maxWidth:"300px", lineHeight:1.6, fontFamily:T.font.body }}>
+          Google Play's age settings on this device show an age under 18, so Strain Sense
+          can't be used here. If that's wrong, the age range can be updated in your Google
+          account settings.
+        </p>
+      ) : (<>
       <button
         onClick={onConfirm}
         style={{
@@ -596,6 +605,7 @@ function AgeGate({ onConfirm }) {
         By continuing, you confirm you are of legal age in your jurisdiction.
         This app is for educational purposes only and does not provide medical advice.
       </p>
+      </>)}
     </div>
   );
 }
@@ -1590,6 +1600,7 @@ export default function StrainSense() {
   const [tolerance, setTolerance] = useState(() => localStorage.getItem(TOLERANCE_KEY)||"regular");
   const [showCounter, setShowCounter] = useState(false);
   const [ageVerified, setAgeVerified] = useState(() => !!localStorage.getItem(AGE_GATE_KEY));
+  const [ageSignal, setAgeSignal] = useState(AGE.UNKNOWN);
   const [disclaimerSeen, setDisclaimerSeen] = useState(() => !!localStorage.getItem(DISCLAIMER_KEY));
   const [scanNote, setScanNote] = useState(null);
   const [entitlement, setEntitlement] = useState({
@@ -1633,6 +1644,13 @@ export default function StrainSense() {
   // Count this session toward the rating prompt. Counting only — nothing is
   // ever asked on a cold open.
   useEffect(() => { startRatingSession(); }, []);
+
+  // CA AB 1043: ask the store for an age range at every launch (Android only).
+  useEffect(() => {
+    let cancelled = false;
+    checkAgeSignal().then(status => { if (!cancelled) setAgeSignal(status); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Entitlement. Off iOS this resolves to unlocked immediately — Play still
   // sells the app outright, so those users have already paid for everything.
@@ -1939,6 +1957,7 @@ export default function StrainSense() {
   };
 
 
+  if (ageSignal === AGE.MINOR) return <AgeGate blocked />;
   if (!ageVerified) return <AgeGate onConfirm={confirmAge} />;
 
   return (
