@@ -6,8 +6,8 @@ export { AGE };
 
 // ─── PLAY AGE SIGNAL ────────────────────────────────────────
 // California AB 1043 (from 2027-01-01) requires asking the app store for the
-// user's age range at launch. On Android that's the Play Age Signals API,
-// reached through the small native plugin in MainActivity's package.
+// user's age range at launch: the Play Age Signals API on Android
+// (AgeSignalsPlugin.java) and Declared Age Range on iOS (AppDelegate.swift).
 //
 // A signal that says the user is under 18 is actual knowledge of a minor, and
 // this app is cannabis information for adults, so it blocks — overriding the
@@ -30,9 +30,10 @@ async function readStored() {
   }
 }
 
-/** Never throws. Resolves to one of AGE. Only Android asks; elsewhere UNKNOWN. */
+/** Never throws. Resolves to one of AGE. Native only (Play on Android, Declared
+ * Age Range on iOS); the web build has no store to ask, so it stays UNKNOWN. */
 export async function checkAgeSignal() {
-  if (Capacitor.getPlatform() !== "android") return AGE.UNKNOWN;
+  if (!Capacitor.isNativePlatform()) return AGE.UNKNOWN;
   const stored = await readStored();
   let fresh = null;
   try {

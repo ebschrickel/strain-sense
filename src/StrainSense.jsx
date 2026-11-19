@@ -583,9 +583,8 @@ function AgeGate({ onConfirm, blocked = false }) {
       {blocked ? (
         // A Play age signal says under 18: no self-attestation can override it.
         <p style={{ fontSize:"14px", color:T.color.textSec, maxWidth:"300px", lineHeight:1.6, fontFamily:T.font.body }}>
-          Google Play's age settings on this device show an age under 18, so Strain Sense
-          can't be used here. If that's wrong, the age range can be updated in your Google
-          account settings.
+          The age range shared from this device is under 18, so Strain Sense can't be used
+          here. If that's wrong, it can be updated in your Google or Apple account settings.
         </p>
       ) : (<>
       <button
@@ -1645,7 +1644,7 @@ export default function StrainSense() {
   // ever asked on a cold open.
   useEffect(() => { startRatingSession(); }, []);
 
-  // CA AB 1043: ask the store for an age range at every launch (Android only).
+  // CA AB 1043: ask the store for an age range at every launch (native apps).
   useEffect(() => {
     let cancelled = false;
     checkAgeSignal().then(status => { if (!cancelled) setAgeSignal(status); });

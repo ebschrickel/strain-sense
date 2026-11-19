@@ -2,6 +2,9 @@ import UIKit
 import WebKit
 import Capacitor
 import StoreKit
+#if canImport(DeclaredAgeRange)
+import DeclaredAgeRange
+#endif
 
 // The app's root view controller. Disables the WKWebView's rubber-band
 // overscroll so the fixed glass background can't drift and no white edge
@@ -28,6 +31,7 @@ class AppViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(StrainSenseIAPPlugin())
         bridge?.registerPluginInstance(StrainSenseSecureStorePlugin())
+        bridge?.registerPluginInstance(StrainSenseAgeSignalsPlugin())
     }
 }
 
@@ -309,5 +313,59 @@ public class StrainSenseIAPPlugin: CAPPlugin, CAPBridgedPlugin {
               let originalBuild = Int(appTransaction.originalAppVersion)
         else { return false }
         return originalBuild <= IAP.lastPaidBuild
+    }
+}
+
+/// Hands Apple's Declared Age Range to JS (src/ageSignal.js), which owns what
+/// the app does with it. California AB 1043 requires asking at launch from
+/// 2027-01-01; Apple decides which users are in a regulated region
+/// (isEligibleForAgeFeatures), so nobody else sees a sharing sheet.
+///
+/// Rejects when there is nothing to ask (old iOS, not eligible, error) so JS
+/// keeps the last known answer; resolves `{}` when the user declines sharing.
+/// The range is never logged or sent anywhere.
+@objc(StrainSenseAgeSignalsPlugin)
+public class StrainSenseAgeSignalsPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "StrainSenseAgeSignalsPlugin"
+    public let jsName = "StrainSenseAgeSignals"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "check", returnType: CAPPluginReturnPromise),
+    ]
+
+    @objc func check(_ call: CAPPluginCall) {
+        #if canImport(DeclaredAgeRange)
+        guard #available(iOS 26.2, *) else {
+            call.reject("Age range unavailable before iOS 26.2")
+            return
+        }
+        Task { @MainActor in
+            do {
+                guard try await AgeRangeService.shared.isEligibleForAgeFeatures else {
+                    call.reject("Not in a region that requires an age range")
+                    return
+                }
+                guard let presenter = self.bridge?.viewController else {
+                    call.reject("No view controller to present from")
+                    return
+                }
+                // One gate at 18: this app only needs to know "minor or not".
+                switch try await AgeRangeService.shared.requestAgeRange(ageGates: 18, in: presenter) {
+                case .declinedSharing:
+                    call.resolve([:])
+                case .sharing(let range):
+                    var out: [String: Any] = [:]
+                    if let lower = range.lowerBound { out["ageLower"] = lower }
+                    if let upper = range.upperBound { out["ageUpper"] = upper }
+                    call.resolve(out)
+                @unknown default:
+                    call.reject("Unrecognised age range response")
+                }
+            } catch {
+                call.reject("Age range unavailable", nil, error)
+            }
+        }
+        #else
+        call.reject("Age range unavailable")
+        #endif
     }
 }
